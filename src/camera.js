@@ -10,8 +10,8 @@ export function createCamera() {
     
     const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
     
-    // TPP Setup: Offset camera to be slightly above and behind the origin
-    const offset = new THREE.Vector3(-12, 18, 12);
+    // TPP Setup: Closer camera for better visibility
+    const offset = new THREE.Vector3(-7, 11, 7);
     
     // Keep camera updated on window resize
     window.addEventListener('resize', () => {

@@ -3,23 +3,235 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Bloxorz 3D - Setup</title>
+    <title>Bloxorz 3D</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-      body {
-        margin: 0;
-        overflow: hidden;
-        background-color: #111;
-        font-family: sans-serif;
+      :root {
+        --bg: #1a1a2e;
+        --text: #e8ecf2;
+        --text-dim: rgba(232, 236, 242, 0.35);
+        --accent-win: #6ee7b7;
+        --accent-fall: #fca5a5;
       }
+
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+
+      body {
+        overflow: hidden;
+        background: var(--bg);
+        font-family: 'Outfit', sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+      }
+
       #canvas-container {
         width: 100vw;
         height: 100vh;
+        position: relative;
+      }
+      /* Vignette overlay — darker edges, brighter center */
+      #canvas-container::after {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(
+          ellipse 70% 60% at 50% 50%,
+          transparent 0%,
+          rgba(10, 10, 20, 0.5) 100%
+        );
+        pointer-events: none;
+      }
+
+      /* ─── UI Layer ─── */
+      #ui-overlay {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+
+      /* ─── Move Counter ─── */
+      #move-counter {
+        margin-top: 36px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+      }
+      #move-number {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 56px;
+        font-weight: 700;
+        color: var(--text);
+        line-height: 1;
+        letter-spacing: -2px;
+        /* tabular nums so width doesn't jump */
+        font-variant-numeric: tabular-nums;
+      }
+      #move-label {
+        font-family: 'Outfit', sans-serif;
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--text-dim);
+        letter-spacing: 4px;
+        text-transform: uppercase;
+      }
+
+      /* ─── Status Overlay (win / fall) ─── */
+      #status-overlay {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.4s ease, visibility 0.4s ease;
+      }
+      #status-overlay.visible {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      /* dim layer */
+      #status-overlay::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: rgba(20, 28, 42, 0.65);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+      }
+
+      #status-content {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+        transform: translateY(12px);
+        transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      #status-overlay.visible #status-content {
+        transform: translateY(0);
+      }
+
+      #status-title {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 48px;
+        font-weight: 800;
+        letter-spacing: 8px;
+        text-transform: uppercase;
+        margin-bottom: 14px;
+      }
+      #status-title.win {
+        color: var(--accent-win);
+        text-shadow: 0 0 60px rgba(110, 231, 183, 0.25);
+      }
+      #status-title.fall {
+        color: var(--accent-fall);
+        text-shadow: 0 0 60px rgba(252, 165, 165, 0.25);
+      }
+
+      #status-subtitle {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 18px;
+        font-weight: 500;
+        color: rgba(232, 236, 242, 0.55);
+        letter-spacing: 3px;
+        margin-bottom: 28px;
+      }
+
+      #status-hint {
+        font-family: 'Outfit', sans-serif;
+        font-size: 12px;
+        font-weight: 500;
+        color: rgba(232, 236, 242, 0.2);
+        letter-spacing: 3px;
+        text-transform: uppercase;
+      }
+
+      /* ─── Bottom Controls ─── */
+      #hint {
+        position: absolute;
+        bottom: 22px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+      }
+      .key-group {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .key {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 22px;
+        height: 22px;
+        padding: 0 6px;
+        border: 1px solid rgba(232, 236, 242, 0.12);
+        border-radius: 4px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 9px;
+        font-weight: 600;
+        color: rgba(232, 236, 242, 0.3);
+        background: rgba(232, 236, 242, 0.04);
+      }
+      .key-sep {
+        color: rgba(232, 236, 242, 0.12);
+        font-size: 10px;
+      }
+      .key-desc {
+        font-family: 'Outfit', sans-serif;
+        font-size: 10px;
+        font-weight: 500;
+        color: rgba(232, 236, 242, 0.18);
+        letter-spacing: 1px;
+        text-transform: uppercase;
       }
     </style>
   </head>
   <body>
-    <!-- The renderer will be attached here -->
     <div id="canvas-container"></div>
+    <div id="ui-overlay">
+
+      <div id="move-counter">
+        <div id="move-number">0</div>
+        <div id="move-label">moves</div>
+      </div>
+
+      <div id="status-overlay">
+        <div id="status-content">
+          <div id="status-title"></div>
+          <div id="status-subtitle"></div>
+          <div id="status-hint"></div>
+        </div>
+      </div>
+
+      <div id="hint">
+        <div class="key-group">
+          <span class="key">&uarr;</span>
+          <span class="key">&darr;</span>
+          <span class="key">&larr;</span>
+          <span class="key">&rarr;</span>
+          <span class="key-desc">move</span>
+        </div>
+        <span class="key-sep">&middot;</span>
+        <div class="key-group">
+          <span class="key">R</span>
+          <span class="key-desc">restart</span>
+        </div>
+      </div>
+
+    </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
