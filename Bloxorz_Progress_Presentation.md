@@ -4,128 +4,114 @@ Computer Graphics — April 2026
 
 ---
 
-## Presentation Tips
+## Quick Tips Before Presenting
 
-> **Lead with CG concepts, not game design.** The professor wants to hear about shaders, shadow mapping, and quaternions — not game rules. Keep the game explanation under 30 seconds.
-
-> **Never say "Three.js does this for us."** Always explain what's happening underneath. Show you understand what the library abstracts away.
-
-> **Don't read slides or show code line-by-line.** Show the visual result first, then explain the CG concept behind it.
+- Talk about **graphics stuff**, not game rules. Keep the game intro under 30 seconds.
+- Don't just say "Three.js handles it." Explain what's actually happening.
+- Show the game first, then explain what's going on behind the scenes.
 
 ---
 
-## The Game (30 Seconds Max)
+## The Game (Say This Fast)
 
-Bloxorz is a puzzle game — roll a block across tiles to reach a goal hole. Built with Three.js/WebGL, runs in the browser. Move on to the CG stuff quickly.
+"We built Bloxorz — a puzzle game where you roll a block to reach a goal. It runs in the browser using Three.js and WebGL."
+
+Done. Move on.
 
 ---
 
-## What We Built — CG Concepts to Present
+## What We Built
 
-### 1. Custom GLSL Shaders (Our Main Highlight — Spend the Most Time Here)
+### 1. Custom Shaders (Talk About This the Most)
 
-Instead of using a pre-built material, we wrote our own programs that run on the GPU:
+We wrote two small programs that run on the graphics card (GPU) instead of the CPU:
 
-- **Vertex shader** — runs for every vertex of the block. Transforms each vertex through the full pipeline: `projectionMatrix * modelViewMatrix * vec4(position, 1.0)` — that's Projection x View x Model. We also displace vertices with a sine wave to create a breathing effect.
+- **Vertex shader** — touches every corner point of our block. It moves each point through 3 steps: place it in the world (Model), see it from the camera (View), flatten it onto the screen (Projection). We also make the block "breathe" by slightly growing/shrinking the points over time.
 
-- **Fragment shader** — runs for every pixel. Calculates color using **Lambertian diffuse lighting**: `max(dot(normal, lightDirection), 0.0)`. The dot product measures how directly a surface faces the light — facing the light = bright, facing away = dark. We added a time-based emissive glow on top.
+- **Fragment shader** — colors every pixel of the block. It uses a simple rule: if a surface faces the light, it's bright. If it faces away, it's dark. This is calculated with a **dot product** between the surface direction and the light direction. We also added a subtle glow that pulses over time.
 
-- **Normal matrix** — we use `normalMatrix` instead of the model matrix for normals because non-uniform scaling would distort them. The normal matrix (transpose of inverse) corrects this.
-
-> **If asked "Walk me through vertex to pixel":**
-> Vertex -> Model transform -> View transform -> Projection -> Clipping -> Rasterization -> Fragment shading -> Framebuffer
+> **If asked about the full pipeline:** points go through Model -> View -> Projection -> Clipping -> Rasterization (turning shapes into pixels) -> Fragment shading (coloring pixels) -> Screen
 
 ### 2. Shadow Mapping
 
-Shadows use a **two-pass technique**:
-1. Render the scene from the **light's point of view** to create a depth texture (shadow map)
-2. In the main render, each pixel checks: "Am I further from the light than what the shadow map says?" If yes, it's in shadow
+How we make shadows:
+1. First, render the scene **from the light's perspective** — this creates a "depth photo" of what the light can see
+2. Then render normally from the camera. For each pixel, compare: is this point further from the light than what the depth photo shows? If yes → shadow
 
-We use **PCF (Percentage-Closer Filtering)** — samples multiple points around each shadow lookup to soften edges. Resolution: 2048x2048.
+We also use **soft shadows** (PCF) — instead of checking one spot, it checks several nearby spots and averages them, which blurs the shadow edges so they look natural.
 
-> **If asked "How does shadow mapping work?"** — describe the two passes.
+### 3. Rotation with Quaternions
 
-### 3. Quaternion Rotation (SLERP)
+The block rolls using **quaternions** instead of regular rotation angles:
 
-The block rolls using **quaternions** instead of Euler angles:
+- Regular angles (Euler) can break at certain positions — this is called **gimbal lock**, where two rotation axes line up and you lose control of one direction
+- Quaternions don't have this problem
+- **SLERP** smoothly animates between the start and end rotation so the rolling looks natural
 
-- **Why not Euler angles?** They have **gimbal lock** — at certain angles you lose a degree of freedom and rotations break
-- **Quaternions** are a 4D number system that avoid this problem
-- **SLERP** (Spherical Linear Interpolation) smoothly blends between two rotations at constant speed
+We also smoothly slide the position from A to B (**LERP**) and add a little arc using a sine wave so it looks like real rolling.
 
-Position uses **LERP** (Linear Interpolation) with a sine-wave arc on top for natural rolling feel.
+### 4. PBR Materials (Tiles)
 
-> **If asked "Why quaternions?"** — gimbal lock avoidance + smooth interpolation.
+The tiles use **Physically Based Rendering** — a way to make surfaces look realistic:
 
-### 4. PBR Materials
+- **Roughness** = how smooth or matte the surface is
+- **Metalness** = how metallic it looks
 
-Tiles use **MeshStandardMaterial** which implements the **Cook-Torrance BRDF**:
+The green goal tile is shiny and metallic. The orange fragile tile is rough and matte. These two numbers are enough to create very different looks.
 
-- **Roughness** — how blurry/sharp reflections are (rough = matte, smooth = shiny)
-- **Metalness** — reflects like plastic (0) or metal (1)
-- Goal tile is metallic with emissive glow, fragile tile is rougher
+### 5. Camera
 
-> **If asked "What is PBR?"** — Physically realistic shading using roughness and metalness, based on Cook-Torrance.
+- **Perspective projection** — things closer to the camera look bigger, just like your eyes work
+- The camera sits behind and above the block, smoothly following it
+- When the block falls, the camera stays put so you can watch it drop
 
-### 5. Perspective Projection Camera
+### 6. Particles
 
-- Defined by FOV (45deg), aspect ratio, near clip (0.1), far clip (1000)
-- These create a **view frustum** — a pyramid-shaped volume, anything outside gets clipped
-- Camera follows the block with LERP interpolation (third-person view)
-
-### 6. Particle System
-
-- 200 particles using **BufferGeometry** with **Float32Array** — typed array that maps directly to GPU vertex buffers
-- Rendered as **GL_POINTS** — each particle is one vertex drawn as a screen-space square
-- `depthWrite: false` prevents transparent particles from writing to the Z-buffer (otherwise they'd hide particles behind them)
-- `needsUpdate = true` tells Three.js to re-upload position data to the GPU each frame
-
-> **If asked "Why depthWrite false?"** — transparent objects shouldn't write to depth buffer or they block things behind them.
+- 200 small dots floating upward in the background
+- Each particle is stored as a point in a big array that gets sent to the GPU
+- They're drawn as **points** (one vertex = one dot on screen) which is very efficient
 
 ### 7. Atmosphere
 
-- **Fog** — fades distant tiles into background (linear fog with start/end distance)
-- **Vignette** — CSS radial gradient darkens edges, focuses eye on center
-- **ACES Tone Mapping** — maps HDR to screen range, like how movies are color graded
-- **Goal pulse** — emissive intensity animated with sine wave
+- **Fog** — far away tiles slowly fade into the background color, creating a sense of distance
+- **Vignette** — edges of the screen are darker, which pulls your eyes to the center
+- **Tone mapping** — a color adjustment step that makes everything look more like a movie instead of raw computer colors
 
 ---
 
-## Demo Plan (Under 4 Minutes)
+## Demo Plan
 
-| Step | Show | Say (CG focus) | Time |
-|------|------|----------------|------|
-| 1 | Running app | "WebGL renderer, perspective camera, scene graph" | 10s |
-| 2 | Lighting & shadows | "Ambient prevents darkness, directional simulates sun and casts shadows via shadow mapping, fill lights add depth" | 30s |
-| 3 | Block up close | "Custom GLSL shader — vertex displacement for pulsation, Lambertian diffuse in fragment shader, runs on GPU" | 60s |
-| 4 | Tile materials | "PBR materials — notice metallic goal vs rough normal tiles" | 20s |
-| 5 | Roll the block | "Quaternion SLERP avoids gimbal lock, sine arc for physics feel" | 30s |
-| 6 | Particles, fog | "GL_POINTS with buffer geometry, fog for depth, ACES tone mapping" | 15s |
-| 7 | Future work | Quick list | 20s |
+| Step | What to Show | What to Say | Time |
+|------|-------------|-------------|------|
+| 1 | Open the game | "Here's our scene running in WebGL" | 10s |
+| 2 | Point at shadows | "Shadows use a two-pass technique — render from light, then compare" | 30s |
+| 3 | Point at the block | "This uses our custom shader — vertex shader moves the points, fragment shader calculates lighting per pixel" | 60s |
+| 4 | Point at tiles | "Tiles use PBR — roughness and metalness control how they look" | 20s |
+| 5 | Roll the block | "Rolling uses quaternions to avoid gimbal lock, animated with SLERP" | 30s |
+| 6 | Point at particles/fog | "Particles are rendered as GPU points, fog adds depth" | 15s |
+| 7 | Future plans | "We'll add more levels, switches, textures, and post-processing" | 20s |
 
 ---
 
 ## What's Coming Next
 
-- **More levels** (3-4) with JSON-based level format
-- **Switches & bridges** — interactive tiles that toggle other tiles
-- **Teleporter tiles** — splits block into two controllable pieces
-- **Texture mapping** on surfaces
-- **Post-processing** — bloom (glow around bright areas), ambient occlusion (darkening in corners)
-- **Level select screen**
-- **First-person camera** (stretch goal)
+- More levels (3-4 total) loaded from JSON files
+- Switches that open/close bridges
+- Teleporter tiles that split the block into two pieces
+- Textures (images) on tile and block surfaces
+- Bloom effect (glow around bright things) and ambient occlusion (darkening in tight corners)
+- Level select screen
+- First-person camera (stretch goal)
 
 ---
 
-## Quick Q&A Cheat Sheet
+## If The Professor Asks...
 
-| Question | Answer |
-|----------|--------|
-| Vertex to pixel pipeline? | Vertex -> Model -> View -> Projection -> Clip -> Rasterize -> Fragment -> Framebuffer |
-| Why quaternions? | Euler angles have gimbal lock. Quaternions + SLERP give smooth, glitch-free rotation |
-| How do shadows work? | Two-pass: render depth from light's view, compare in main render |
-| What lighting model? | Lambertian diffuse: `max(dot(N, L), 0.0)` + ambient + emissive |
-| Why normal matrix? | Corrects for non-uniform scaling that would distort normals |
-| Why depthWrite false? | Transparent particles shouldn't block things behind them in Z-buffer |
-| What is PBR? | Cook-Torrance BRDF — roughness + metalness simulate real material behavior |
-| What is tone mapping? | Maps wide-range HDR colors to displayable screen range |
+| Question | Simple Answer |
+|----------|-------------|
+| How does the graphics pipeline work? | Points → place in world → view from camera → flatten to screen → clip edges → turn into pixels → color each pixel → display |
+| Why quaternions? | Regular angles break at certain positions (gimbal lock). Quaternions don't. |
+| How do shadows work? | Render from the light first to get depth info, then use it to check what's in shadow |
+| What lighting model do you use? | If the surface faces the light → bright. Faces away → dark. Calculated with a dot product. |
+| What is PBR? | Two numbers — roughness and metalness — control how a surface reflects light, based on real physics |
+| What is tone mapping? | A color correction step that makes raw computer colors look more natural and cinematic |
