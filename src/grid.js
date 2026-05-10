@@ -79,9 +79,18 @@ function getMaterialKey(type) {
     }
 }
 
-function createTileMaterial(type) {
+function createTileMaterial(type, themeColors = null) {
     const key = getMaterialKey(type);
     const cfg = { ...(TILE_CONFIGS[key] || TILE_CONFIGS.normal) };
+
+    if (themeColors) {
+        if (key === 'normal' || key === 'bridge') cfg.color = themeColors.tiles;
+        if (key === 'goal') {
+            cfg.color = themeColors.goal;
+            cfg.emissive = themeColors.goal;
+        }
+    }
+
     const mat = new THREE.MeshPhysicalMaterial(cfg);
 
     // Subtle per-tile color variation — breaks uniform grid look
@@ -96,7 +105,7 @@ function createTileMaterial(type) {
 
 // ── Grid builder ────────────────────────────────────────────────────────────
 
-export function createGrid(scene, levelData, animate = true) {
+export function createGrid(scene, levelData, animate = true, themeColors = null) {
     const levelLayout = levelData.layout.map(row => [...row]);
     const startRow = levelData.startRow;
     const startCol = levelData.startCol;
@@ -126,7 +135,7 @@ export function createGrid(scene, levelData, animate = true) {
     let goalTile = null;
 
     function createTileMesh(row, col, type, startBelow = false) {
-        const mat = createTileMaterial(type);
+        const mat = createTileMaterial(type, themeColors);
         const tile = new THREE.Mesh(geometry, mat);
         tile.receiveShadow = true;
         tile.castShadow = true;
@@ -233,10 +242,7 @@ export function createGrid(scene, levelData, animate = true) {
         const key = `${row},${col}`;
         if (tiles[key]) return;
 
-        const mat = createTileMaterial(1); // bridge uses normal-ish material
-        mat.color.set(TILE_CONFIGS.bridge.color);
-        mat.emissive = new THREE.Color(TILE_CONFIGS.bridge.emissive);
-        mat.emissiveIntensity = TILE_CONFIGS.bridge.emissiveIntensity;
+        const mat = createTileMaterial(1, themeColors);
 
         const tile = new THREE.Mesh(geometry, mat);
         tile.receiveShadow = true;
@@ -282,9 +288,10 @@ export function createGrid(scene, levelData, animate = true) {
         const startY = tile.position.y;
         const startTime = performance.now();
         function fall() {
-            const p = Math.min((performance.now() - startTime) / 600, 1.0);
-            tile.position.y = startY - p * p * 8;
-            if (tile.material.transparent) tile.material.opacity = 1 - p;
+            const p = Math.min((performance.now() - startTime) / 350, 1.0);
+            tile.position.y = startY - p * p * 6;
+            tile.material.transparent = true;
+            tile.material.opacity = 1 - p * p;
             if (p >= 1.0) gridGroup.remove(tile);
             else requestAnimationFrame(fall);
         }
@@ -361,31 +368,26 @@ export function createGrid(scene, levelData, animate = true) {
 
         Object.entries(tiles).forEach(([key, tile]) => {
             const dist = Math.abs(tile.position.x - goalX) + Math.abs(tile.position.z - goalZ);
-            const delay = dist * 70 + Math.random() * 50;
+            const delay = dist * 40 + Math.random() * 30;
             const startTime = performance.now() + delay;
             const startY = tile.position.y;
-            const rotX = (Math.random() - 0.5) * 0.08;
-            const rotZ = (Math.random() - 0.5) * 0.08;
-            // Slight drift outward from center
-            const driftX = (tile.position.x - goalX) * 0.15;
-            const driftZ = (tile.position.z - goalZ) * 0.15;
+            // Drift outward from goal so tiles scatter away
+            const driftX = (tile.position.x - goalX) * 0.4;
+            const driftZ = (tile.position.z - goalZ) * 0.4;
 
             function step() {
                 const now = performance.now();
                 if (now < startTime) { requestAnimationFrame(step); return; }
-                const t = Math.min((now - startTime) / 1800, 1);
-                const ease = t * t * t; // slow start, accelerates late
-                tile.position.y = startY - ease * 40;
-                tile.position.x += driftX * 0.003;
-                tile.position.z += driftZ * 0.003;
-                tile.rotation.x += rotX * 0.02;
-                tile.rotation.z += rotZ * 0.02;
-                // Fade out in the last third
-                if (t > 0.6) {
-                    tile.material.transparent = true;
-                    tile.material.opacity = 1 - (t - 0.6) / 0.4;
-                }
+                const t = Math.min((now - startTime) / 800, 1);
+                const ease = t * t;
+                // Fade out quickly and drift outward — no vertical drop
+                tile.position.x += driftX * 0.008;
+                tile.position.z += driftZ * 0.008;
+                tile.position.y = startY + ease * 2; // float up slightly
+                tile.material.transparent = true;
+                tile.material.opacity = 1 - ease;
                 if (t < 1) requestAnimationFrame(step);
+                else gridGroup.remove(tile);
             }
             requestAnimationFrame(step);
         });

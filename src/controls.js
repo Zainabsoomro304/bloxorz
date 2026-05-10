@@ -12,7 +12,7 @@ export function setupControls(game, callbacks) {
             return;
         }
 
-        // Escape — back to level select
+        // Escape — back to home screen
         if (e.key === 'Escape') {
             callbacks.onEscape();
             return;
@@ -224,11 +224,14 @@ function validatePosition(game, blockApi, callbacks) {
     if (!allValid) {
         sounds.fall();
         callbacks.onFall();
+        // Find which cells are valid vs invalid for pivot direction
+        const validCells = cells.filter(c => gridApi.getTileType(c.row, c.col) !== 0);
+        const invalidCells = cells.filter(c => gridApi.getTileType(c.row, c.col) === 0);
         animateFall(blockApi, () => {
             setTimeout(() => {
                 if (game.blockApi === blockApi) callbacks.onReset();
             }, 400);
-        });
+        }, false, validCells, invalidCells);
         return;
     }
 
@@ -252,7 +255,13 @@ function validatePosition(game, blockApi, callbacks) {
             sounds.tileBreak();
             gridApi.removeTile(cell.row, cell.col);
             blockApi.state.isAnimating = true;
-            setTimeout(() => {
+            // Block sinks slightly during tile break, then falls
+            const block = blockApi.mesh;
+            const sinkStart = performance.now();
+            function sink() {
+                const p = Math.min((performance.now() - sinkStart) / 200, 1);
+                block.position.y -= p * 0.015;
+                if (p < 1) { requestAnimationFrame(sink); return; }
                 if (game.blockApi !== blockApi) return;
                 sounds.fall();
                 callbacks.onFall();
@@ -260,8 +269,9 @@ function validatePosition(game, blockApi, callbacks) {
                     setTimeout(() => {
                         if (game.blockApi === blockApi) callbacks.onReset();
                     }, 400);
-                });
-            }, 300);
+                }, true);
+            }
+            requestAnimationFrame(sink);
             return;
         }
 
@@ -408,80 +418,152 @@ function checkMerge(game, callbacks) {
     }
 }
 
-// ── Fall animation — dramatic tumble off the edge ──────────────────────────
+// ── Fall animation — physics-based tip off edge ─────────────────────────────
 
-function animateFall(blockApi, onComplete) {
+function animateFall(blockApi, onComplete, throughHole = false, validCells = [], invalidCells = []) {
     blockApi.state.isFalling = true;
     const block = blockApi.mesh;
     const startPos = block.position.clone();
     const startQuat = block.quaternion.clone();
     const startTime = performance.now();
-    const duration = 1200;
+    const orientation = blockApi.state.orientation;
 
-    // Random tumble direction
-    const tumbleAxis = new THREE.Vector3(
-        (Math.random() - 0.5),
-        0.2,
-        (Math.random() - 0.5)
-    ).normalize();
+    // Determine if block is lying with one half hanging off (needs pivot)
+    const needsPivot = !throughHole && orientation !== 'standing'
+        && validCells.length > 0 && invalidCells.length > 0;
 
-    // Slight horizontal drift as it falls
-    const driftX = (Math.random() - 0.5) * 2;
-    const driftZ = (Math.random() - 0.5) * 2;
+    if (needsPivot) {
+        // Pivot around the edge between valid and invalid cell
+        const valid = validCells[0];
+        const invalid = invalidCells[0];
 
-    function easeInQuad(t) { return t * t; }
+        // Direction from valid cell toward invalid cell (the tipping direction)
+        const dirX = invalid.col - valid.col;  // +1, -1, or 0
+        const dirZ = invalid.row - valid.row;
 
-    function step() {
-        const progress = Math.min((performance.now() - startTime) / duration, 1.0);
+        // Pivot edge is at the boundary between valid and invalid cells
+        const pivotX = valid.col + dirX * 0.5;
+        const pivotZ = valid.row + dirZ * 0.5;
+        const pivotY = 0; // tile surface
 
-        // Phase 1 (0-15%): brief wobble/hesitation before falling
-        // Phase 2 (15-100%): accelerating fall with tumble + shrink + fade
-        if (progress < 0.15) {
-            const wobble = Math.sin(progress / 0.15 * Math.PI * 3) * 0.03;
-            block.position.y = startPos.y + wobble;
-            block.position.x = startPos.x + Math.sin(progress / 0.15 * Math.PI * 4) * 0.02;
-        } else {
-            const fallP = (progress - 0.15) / 0.85;
-            const ease = easeInQuad(fallP);
+        // Rotation axis is perpendicular to the tip direction (cross with Y-up)
+        // If tipping in +X, rotate around Z axis (negative for correct direction)
+        // If tipping in +Z, rotate around X axis (positive for correct direction)
+        const rotAxis = new THREE.Vector3(dirZ, 0, -dirX).normalize();
 
-            // Accelerating drop
-            block.position.y = startPos.y - ease * 12;
+        const tipDuration = 500;   // pivot phase
+        const fallDuration = 600;  // free-fall after tipping
+        const totalDuration = tipDuration + fallDuration;
+        const tipAngle = Math.PI / 2; // 90 degrees tip
 
-            // Drift sideways
-            block.position.x = startPos.x + fallP * driftX;
-            block.position.z = startPos.z + fallP * driftZ;
+        function step() {
+            const elapsed = performance.now() - startTime;
+            const progress = Math.min(elapsed / totalDuration, 1.0);
 
-            // Tumble rotation — speeds up as it falls
-            const tumbleAngle = fallP * fallP * Math.PI * 3;
-            const tumbleQuat = new THREE.Quaternion().setFromAxisAngle(tumbleAxis, tumbleAngle);
-            block.quaternion.copy(startQuat).premultiply(tumbleQuat);
+            if (elapsed < tipDuration) {
+                // Phase 1: Pivot/tip around the edge — accelerating
+                const p = elapsed / tipDuration;
+                const ease = p * p; // accelerating rotation
+                const angle = ease * tipAngle;
 
-            // Shrink in later half
-            if (fallP > 0.4) {
-                const shrinkP = (fallP - 0.4) / 0.6;
-                const s = 1 - shrinkP * 0.8;
+                // Rotate block around the pivot point
+                block.position.copy(startPos);
+                block.quaternion.copy(startQuat);
+
+                // Translate to pivot, rotate, translate back
+                block.position.sub(new THREE.Vector3(pivotX, pivotY, pivotZ));
+                const q = new THREE.Quaternion().setFromAxisAngle(rotAxis, angle);
+                block.position.applyQuaternion(q);
+                block.position.add(new THREE.Vector3(pivotX, pivotY, pivotZ));
+                block.quaternion.premultiply(q);
+
+            } else {
+                // Phase 2: Free-fall with continued rotation
+                const fallP = (elapsed - tipDuration) / fallDuration;
+                const fallEase = fallP * fallP;
+
+                // Continue from where tip ended
+                block.position.copy(startPos);
+                block.quaternion.copy(startQuat);
+                block.position.sub(new THREE.Vector3(pivotX, pivotY, pivotZ));
+                const q = new THREE.Quaternion().setFromAxisAngle(rotAxis, tipAngle + fallP * Math.PI);
+                block.position.applyQuaternion(q);
+                block.position.add(new THREE.Vector3(pivotX, pivotY, pivotZ));
+                block.quaternion.premultiply(q);
+
+                // Accelerating drop on top of the rotation
+                block.position.y -= fallEase * 14;
+
+                // Shrink
+                if (fallP > 0.3) {
+                    const s = 1 - ((fallP - 0.3) / 0.7) * 0.7;
+                    block.scale.set(s, s, s);
+                }
+
+                // Fade
+                if (fallP > 0.4) {
+                    block.material.transparent = true;
+                    block.material.opacity = 1 - (fallP - 0.4) / 0.6;
+                }
+            }
+
+            if (progress >= 1.0) {
+                block.scale.set(1, 1, 1);
+                block.material.transparent = false;
+                block.material.opacity = 1;
+                block.quaternion.identity();
+                blockApi.state.isFalling = false;
+                onComplete();
+            } else {
+                requestAnimationFrame(step);
+            }
+        }
+        requestAnimationFrame(step);
+
+    } else {
+        // Simple straight drop (standing fall, through-hole, or fully off-grid)
+        const duration = throughHole ? 800 : 1000;
+        const tumbleAxis = new THREE.Vector3(
+            (Math.random() - 0.5), 0.2, (Math.random() - 0.5)
+        ).normalize();
+
+        function step() {
+            const progress = Math.min((performance.now() - startTime) / duration, 1.0);
+            const ease = progress * progress;
+
+            block.position.y = startPos.y - ease * 18;
+
+            // Tumble for edge falls (not through-hole)
+            if (!throughHole && progress > 0.15) {
+                const tumbleP = (progress - 0.15) / 0.85;
+                const angle = tumbleP * tumbleP * Math.PI * 2;
+                const q = new THREE.Quaternion().setFromAxisAngle(tumbleAxis, angle);
+                block.quaternion.copy(startQuat).premultiply(q);
+            }
+
+            if (progress > 0.5) {
+                const s = 1 - ((progress - 0.5) / 0.5) * 0.7;
                 block.scale.set(s, s, s);
             }
 
-            // Fade out material
-            if (fallP > 0.6) {
-                const fadeP = (fallP - 0.6) / 0.4;
+            if (progress > 0.7) {
                 block.material.transparent = true;
-                block.material.opacity = 1 - fadeP;
+                block.material.opacity = 1 - (progress - 0.7) / 0.3;
+            }
+
+            if (progress >= 1.0) {
+                block.scale.set(1, 1, 1);
+                block.material.transparent = false;
+                block.material.opacity = 1;
+                block.quaternion.identity();
+                blockApi.state.isFalling = false;
+                onComplete();
+            } else {
+                requestAnimationFrame(step);
             }
         }
-
-        if (progress >= 1.0) {
-            block.scale.set(1, 1, 1);
-            block.material.transparent = false;
-            block.material.opacity = 1;
-            blockApi.state.isFalling = false;
-            onComplete();
-        } else {
-            requestAnimationFrame(step);
-        }
+        requestAnimationFrame(step);
     }
-    requestAnimationFrame(step);
 }
 
 // ── Win animation — satisfying sink into the goal ──────────────────────────

@@ -1,11 +1,11 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
-export function createBlock(scene, startCol = 0, startRow = 0) {
+export function createBlock(scene, startCol = 0, startRow = 0, color = 0xE84060) {
     const geometry = new RoundedBoxGeometry(0.95, 1.95, 0.95, 2, 0.06);
 
     const material = new THREE.MeshPhysicalMaterial({
-        color: 0xE84060,
+        color: color,
         metalness: 0.02,
         roughness: 0.3,
         clearcoat: 0.7,

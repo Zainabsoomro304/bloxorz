@@ -1,10 +1,11 @@
-import { createScene } from './scene.js';
+import { createScene, updateSky } from './scene.js';
 import { createCamera } from './camera.js';
-import { setupLighting } from './lighting.js';
+import { setupLighting, updateLighting } from './lighting.js';
 import { createGrid } from './grid.js';
 import { createBlock, createCube, getOrientationQuaternion, getBlockYForOrientation } from './block.js';
 import { setupControls } from './controls.js';
 import { LEVELS } from './levels.js';
+import { THEMES } from './themes.js';
 import { sounds } from './sounds.js';
 import * as THREE from 'three';
 
@@ -36,13 +37,16 @@ const statusSubtitle  = document.getElementById('status-subtitle');
 const statusHint      = document.getElementById('status-hint');
 const moveNumberEl    = document.getElementById('move-number');
 const levelNameEl     = document.getElementById('level-name');
+const homeScreenEl    = document.getElementById('home-screen');
+const playBtnEl       = document.getElementById('play-btn');
 const levelSelectEl   = document.getElementById('level-select');
+const lsBackBtnEl     = document.getElementById('ls-back');
 const gameUiEl        = document.getElementById('game-ui');
 const splitHintEl     = document.getElementById('split-hint');
 
 // ── Scene, Camera, Lighting ─────────────────────────────────────────────────
 
-const { scene, renderer } = createScene(container);
+const { scene, renderer } = createScene(container, THEMES[0].sky);
 const cameraApi = createCamera();
 const { camera, update: updateCamera } = cameraApi;
 setupLighting(scene);
@@ -62,15 +66,22 @@ sparkles.setPixelRatio(renderer.getPixelRatio());
 sparkles.position.set(3, 3, 1);
 scene.add(sparkles);
 
-// ── Contact shadow plane ──────────────────────────────────────────────────
+// ── Theme helpers ─────────────────────────────────────────────────────────
 
-const shadowPlaneGeo = new THREE.PlaneGeometry(60, 60);
-const shadowPlaneMat = new THREE.ShadowMaterial({ opacity: 0.35 });
-const shadowPlane = new THREE.Mesh(shadowPlaneGeo, shadowPlaneMat);
-shadowPlane.rotation.x = -Math.PI / 2;
-shadowPlane.position.y = -0.21;
-shadowPlane.receiveShadow = true;
-scene.add(shadowPlane);
+const _ca = new THREE.Color();
+const _cb = new THREE.Color();
+function lerpHex(a, b, t) {
+    _ca.set(a); _cb.set(b);
+    _ca.lerp(_cb, t);
+    return '#' + _ca.getHexString();
+}
+
+function applyTheme(index) {
+    const theme = THEMES[index] || THEMES[0];
+    updateSky(theme.sky);
+    scene.fog.color.set(theme.fog);
+    sparkles.color = new THREE.Color(theme.sparkle);
+}
 
 // ── Post-processing ───────────────────────────────────────────────────────
 
@@ -118,11 +129,8 @@ pathTracer.rasterizeSceneCallback = () => {
 let ptNeedsUpdate = true;
 
 function rebuildPathTracerScene() {
-    // Hide shadow plane during BVH build — path tracing has natural shadows
-    shadowPlane.visible = false;
     camera.updateMatrixWorld();
     pathTracer.setScene(scene, camera);
-    shadowPlane.visible = true;
     ptNeedsUpdate = false;
 }
 
@@ -172,17 +180,129 @@ function isLevelUnlocked(index) {
     return prog.completed && prog.completed.includes(prevId);
 }
 
-// ── Level Select ────────────────────────────────────────────────────────────
+// ── Menu Scene ──────────────────────────────────────────────────────────────
 
-function showLevelSelect() {
-    levelSelectEl.classList.add('visible');
+let menuBlock = null;
+let menuGrid = null;
+let menuState = 'home'; // 'home' | 'levelSelect' | 'transitioning' | 'game'
+
+function createMenuScene() {
+    const theme = THEMES[0];
+    applyTheme(0);
+
+    // A level-like platform to showcase the block
+    const miniLevel = {
+        layout: [
+            [0, 1, 1, 1, 0],
+            [1, 1, 1, 1, 1],
+            [1, 1, 1, 1, 1],
+            [0, 1, 1, 2, 0],
+        ],
+        startRow: 1, startCol: 2,
+        switches: {}, bridges: {},
+    };
+    menuGrid = createGrid(scene, miniLevel, true, { tiles: theme.tiles, goal: theme.goal });
+    menuBlock = createBlock(scene, 2, 1, theme.block);
+}
+
+function cleanupMenuScene() {
+    if (menuGrid) { scene.remove(menuGrid.gridGroup); menuGrid = null; }
+    if (menuBlock) { scene.remove(menuBlock.mesh); menuBlock = null; }
+}
+
+// ── Home Screen ─────────────────────────────────────────────────────────────
+
+function enterHomeState() {
+    // Final state setup — called after transition or on first load
+    menuState = 'home';
+    homeScreenEl.classList.add('visible');
+    levelSelectEl.classList.remove('visible');
     gameUiEl.style.display = 'none';
     statusOverlay.classList.remove('visible');
+}
 
-    // Clean up game objects
+function cleanupGame() {
     if (game.gridApi) { scene.remove(game.gridApi.gridGroup); game.gridApi = null; }
     if (game.blockApi) { scene.remove(game.blockApi.mesh); game.blockApi = null; }
     cleanupSplit();
+    game.isWon = false;
+    game.isTransitioning = false;
+}
+
+function ensureMenuScene() {
+    cleanupGame();
+    cleanupMenuScene();
+    createMenuScene();
+}
+
+function showHomeScreen(fromGame = false) {
+    if (menuState === 'transitioning') return;
+
+    // Hide all UI immediately
+    levelSelectEl.classList.remove('visible');
+    homeScreenEl.classList.remove('visible');
+    gameUiEl.style.display = 'none';
+    statusOverlay.classList.remove('visible');
+
+    if (fromGame && menuState === 'game') {
+        // Smooth camera swoosh from gameplay back to menu
+        menuState = 'transitioning';
+        const startCamPos = camera.position.clone();
+        const startLookAt = game.blockApi
+            ? game.blockApi.mesh.position.clone()
+            : new THREE.Vector3(0, 0, 0);
+        const curTheme = THEMES[game.currentLevel] || THEMES[0];
+        const menuTheme = THEMES[0];
+
+        ensureMenuScene();
+
+        const menuLookAt = new THREE.Vector3(2, 0.5, 1.5);
+        const endCamPos = new THREE.Vector3(2 + 5.5, 4.5, 1.5);
+
+        const transStart = performance.now();
+        const totalDuration = 1600;
+
+        function step() {
+            const t = Math.min((performance.now() - transStart) / totalDuration, 1);
+            const ease = t < 0.5
+                ? 4 * t * t * t
+                : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+            const lift = Math.sin(t * Math.PI) * 4;
+            camera.position.lerpVectors(startCamPos, endCamPos, ease);
+            camera.position.y += lift;
+
+            const lookTarget = startLookAt.clone().lerp(menuLookAt, ease);
+            camera.lookAt(lookTarget);
+
+            const skyColors = curTheme.sky.map((c, i) => lerpHex(c, menuTheme.sky[i], ease));
+            updateSky(skyColors);
+            scene.fog.color.copy(new THREE.Color(curTheme.fog)).lerp(new THREE.Color(menuTheme.fog), ease);
+
+            if (t >= 1) {
+                applyTheme(0);
+                enterHomeState();
+                ptNeedsUpdate = true;
+            } else {
+                requestAnimationFrame(step);
+            }
+        }
+        requestAnimationFrame(step);
+    } else {
+        // Direct — first load or from level select
+        ensureMenuScene();
+        applyTheme(0);
+        enterHomeState();
+    }
+}
+
+// ── Level Select ────────────────────────────────────────────────────────────
+
+function populateLevelSelect() {
+    const themeBlockColors = THEMES.map(t => {
+        const c = new THREE.Color(t.block);
+        return '#' + c.getHexString();
+    });
 
     const prog = loadProgress();
     const grid = levelSelectEl.querySelector('.level-grid');
@@ -195,15 +315,19 @@ function showLevelSelect() {
         const unlocked = isLevelUnlocked(idx);
         const completed = prog.completed && prog.completed.includes(level.id);
         const best = prog.best && prog.best[level.id];
+        const dotColor = themeBlockColors[idx] || themeBlockColors[0];
 
         if (!unlocked) btn.classList.add('locked');
-        if (completed) btn.classList.add('completed');
+        if (completed) {
+            btn.classList.add('completed');
+            btn.style.background = dotColor;
+            btn.style.borderColor = dotColor;
+        }
 
+        const beatPar = completed && best && best <= level.par;
         btn.innerHTML = `
             <span class="level-num">${level.id}</span>
-            <span class="level-title">${level.name}</span>
-            ${completed ? `<span class="level-best">${best || '?'}/${level.par}</span>` : ''}
-            ${!unlocked ? '<span class="level-lock">&#128274;</span>' : ''}
+            ${beatPar ? '<span class="level-star">&#9733;</span>' : ''}
         `;
 
         if (unlocked) {
@@ -214,14 +338,92 @@ function showLevelSelect() {
     });
 }
 
+function showLevelSelect() {
+    if (menuState === 'transitioning') return;
+    if (!menuBlock) {
+        ensureMenuScene();
+        applyTheme(0);
+    }
+    menuState = 'levelSelect';
+    homeScreenEl.classList.remove('visible');
+    gameUiEl.style.display = 'none';
+    statusOverlay.classList.remove('visible');
+    populateLevelSelect();
+    levelSelectEl.classList.add('visible');
+}
+
+playBtnEl.addEventListener('click', () => showLevelSelect());
+lsBackBtnEl.addEventListener('click', () => {
+    menuState = 'home';
+    levelSelectEl.classList.remove('visible');
+    homeScreenEl.classList.add('visible');
+});
+
 // ── Level lifecycle ─────────────────────────────────────────────────────────
 
 function startLevel(index) {
-    game.currentLevel = index;
+    if (menuState === 'transitioning') return;
+    menuState = 'transitioning';
     levelSelectEl.classList.remove('visible');
-    gameUiEl.style.display = '';
+    homeScreenEl.classList.remove('visible');
+    gameUiEl.style.display = 'none';
+
+    // Clear the home-screen camera offset
+    camera.clearViewOffset();
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+
+    game.currentLevel = index;
+
+    const startCamPos = camera.position.clone();
+    const startLookAt = new THREE.Vector3(2, 0.5, 1.5);
+
+    const oldTheme = THEMES[0];
+    const newTheme = THEMES[index] || THEMES[0];
+
+    // Clean up menu and create level immediately
+    cleanupMenuScene();
+    applyTheme(index);
     resetLevel();
-    sounds.levelStart();
+
+    const endTarget = game.blockApi.mesh.position.clone();
+    const endCamPos = endTarget.clone().add(cameraApi.offset);
+
+    const transStart = performance.now();
+    const totalDuration = 1600;
+
+    function step() {
+        const t = Math.min((performance.now() - transStart) / totalDuration, 1);
+
+        // Smooth ease-in-out cubic — feels natural, not dramatic
+        const ease = t < 0.5
+            ? 4 * t * t * t
+            : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+        // Camera: simple smooth lerp with a gentle lift in the middle
+        const lift = Math.sin(t * Math.PI) * 4;
+        camera.position.lerpVectors(startCamPos, endCamPos, ease);
+        camera.position.y += lift;
+
+        // Look target blends smoothly
+        const lookTarget = startLookAt.clone().lerp(endTarget, ease);
+        camera.lookAt(lookTarget);
+
+        // Sky/fog crossfade
+        const skyColors = oldTheme.sky.map((c, i) => lerpHex(c, newTheme.sky[i], ease));
+        updateSky(skyColors);
+        scene.fog.color.copy(new THREE.Color(oldTheme.fog)).lerp(new THREE.Color(newTheme.fog), ease);
+
+        if (t >= 1) {
+            gameUiEl.style.display = '';
+            menuState = 'game';
+            sounds.levelStart();
+            ptNeedsUpdate = true;
+        } else {
+            requestAnimationFrame(step);
+        }
+    }
+    requestAnimationFrame(step);
 }
 
 function resetLevel() {
@@ -231,9 +433,11 @@ function resetLevel() {
     cleanupSplit();
 
     const levelData = LEVELS[game.currentLevel];
+    const theme = THEMES[game.currentLevel] || THEMES[0];
 
-    game.gridApi = createGrid(scene, levelData);
-    game.blockApi = createBlock(scene, levelData.startCol, levelData.startRow);
+    applyTheme(game.currentLevel);
+    game.gridApi = createGrid(scene, levelData, true, { tiles: theme.tiles, goal: theme.goal });
+    game.blockApi = createBlock(scene, levelData.startCol, levelData.startRow, theme.block);
     game.moves = 0;
     game.isWon = false;
     game.moveHistory = [];
@@ -282,20 +486,17 @@ const LEVEL_DROP = -16;
 
 function performLevelTransition() {
     game.isTransitioning = true;
-    const nextIndex = game.currentLevel + 1;
+    const oldIndex = game.currentLevel;
+    const nextIndex = oldIndex + 1;
     const nextLevel = LEVELS[nextIndex];
+    const oldTheme = THEMES[oldIndex] || THEMES[0];
+    const nextTheme = THEMES[nextIndex] || THEMES[0];
 
     const block = game.blockApi.mesh;
     const oldGridApi = game.gridApi;
 
-    // Clean up block state from win animation (rotation, scale, emissive)
-    block.rotation.set(0, 0, 0);
-    block.quaternion.identity();
-    block.scale.set(1, 1, 1);
-    block.material.transparent = false;
-    block.material.opacity = 1;
-
-    // Snap block to exact goal grid position
+    // Block is already in a clean state from the simplified win animation
+    // Just snap XZ to exact goal grid position
     const goalCol = Math.round(block.position.x);
     const goalRow = Math.round(block.position.z);
     block.position.x = goalCol;
@@ -304,9 +505,9 @@ function performLevelTransition() {
     // Old level tiles cascade-fall away
     oldGridApi.fallAway();
 
-    // Create next level below — positioned so its start tile is directly
-    // under the current goal tile (block falls straight down onto it)
-    const newGridApi = createGrid(scene, nextLevel, false);
+    // Create next level below with the new theme's colors
+    const newGridApi = createGrid(scene, nextLevel, false,
+        { tiles: nextTheme.tiles, goal: nextTheme.goal });
     const xzOffset = {
         x: goalCol - nextLevel.startCol,
         z: goalRow - nextLevel.startRow,
@@ -333,33 +534,53 @@ function performLevelTransition() {
     levelNameEl.textContent = `${nextLevel.id}. ${nextLevel.name}`;
 
     // Block falls continuously from its current position to the new level
-    const startY = block.position.y; // ~-2.2 from the win sink
-    const targetY = 1 + LEVEL_DROP;  // standing height on the offset grid
+    const startY = block.position.y;
+    const targetY = 1 + LEVEL_DROP;
     const fallStart = performance.now();
     const fallDuration = 950;
 
+    // Pre-compute block color targets for smooth lerp
+    const blockColorStart = block.material.color.clone();
+    const blockColorEnd = new THREE.Color(nextTheme.block);
+    const fogColorStart = scene.fog.color.clone();
+    const fogColorEnd = new THREE.Color(nextTheme.fog);
+    const sparkleColorStart = new THREE.Color(oldTheme.sparkle);
+    const sparkleColorEnd = new THREE.Color(nextTheme.sparkle);
+
     function fall() {
         const t = Math.min((performance.now() - fallStart) / fallDuration, 1);
-        const ease = t * t; // gravity-like acceleration
+        const ease = t * t;
 
         block.position.y = startY + (targetY - startY) * ease;
 
-        // Subtle wobble during fall
-        block.rotation.z = Math.sin(t * Math.PI * 2.5) * 0.03 * (1 - t);
-        block.rotation.x = Math.sin(t * Math.PI * 2 + 0.5) * 0.02 * (1 - t);
+        // ── Smooth theme transition ──
+        // Sky gradient interpolation
+        const skyColors = oldTheme.sky.map((c, i) => lerpHex(c, nextTheme.sky[i], t));
+        updateSky(skyColors);
 
-        // New level fades into view as block approaches (20%→75% of fall)
+        // Fog color
+        scene.fog.color.copy(fogColorStart).lerp(fogColorEnd, t);
+
+        // Block color
+        block.material.color.copy(blockColorStart).lerp(blockColorEnd, t);
+
+        // Sparkle color
+        _ca.copy(sparkleColorStart).lerp(sparkleColorEnd, t);
+        sparkles.color = _ca.clone();
+
+        // New level tiles fade into view (20%→75% of fall)
         const fadeT = Math.max(0, Math.min((t - 0.2) / 0.55, 1));
-        const tileOpacity = fadeT * fadeT; // smooth ease-in
         newTiles.forEach(tile => {
-            tile.material.opacity = tileOpacity;
+            tile.material.opacity = fadeT * fadeT;
         });
 
         if (t >= 1) {
             // ── Landing ──
             block.position.y = targetY;
-            block.rotation.set(0, 0, 0);
-            block.quaternion.identity();
+
+            // Finalize theme
+            applyTheme(nextIndex);
+            block.material.color.set(nextTheme.block);
 
             // Tiles fully opaque
             newTiles.forEach(tile => {
@@ -368,7 +589,6 @@ function performLevelTransition() {
             });
 
             // Teleport everything back to origin
-            // (all elements shift by the same vector → no visible change)
             const shiftX = -xzOffset.x;
             const shiftY = -LEVEL_DROP;
             const shiftZ = -xzOffset.z;
@@ -435,7 +655,7 @@ function onWin() {
 }
 
 function onReset() {
-    if (game.isTransitioning) return;
+    if (game.isTransitioning || menuState === 'transitioning') return;
     if (game.isWon && game.currentLevel < LEVELS.length - 1) {
         startLevel(game.currentLevel + 1);
     } else {
@@ -444,8 +664,18 @@ function onReset() {
 }
 
 function onEscape() {
-    if (game.isTransitioning) return;
-    showLevelSelect();
+    if (menuState === 'home') return;
+    if (menuState === 'levelSelect') {
+        menuState = 'home';
+        levelSelectEl.classList.remove('visible');
+        homeScreenEl.classList.add('visible');
+        return;
+    }
+    // Force switch to exact same home screen as initial page load
+    // No guards — always works regardless of current state
+    ensureMenuScene();
+    applyTheme(0);
+    enterHomeState();
 }
 
 function onSplit(teleportTo) {
@@ -508,7 +738,7 @@ setupControls(game, {
 
 // ── Start ───────────────────────────────────────────────────────────────────
 
-showLevelSelect();
+showHomeScreen();
 
 // ── Animation loop ──────────────────────────────────────────────────────────
 
@@ -519,17 +749,46 @@ function animate() {
     const time = clock.getElapsedTime();
     const delta = clock.getDelta();
 
-    // Update block or cubes
-    if (game.isSplit && game.cubes) {
-        game.cubes.forEach((c, i) => c.update(time, i === game.activeCubeIndex));
-        const activeCube = game.cubes[game.activeCubeIndex];
-        updateCamera(activeCube.mesh.position);
-    } else if (game.blockApi) {
-        game.blockApi.update(time);
-        if (!game.blockApi.state.isFalling) {
-            // Faster camera follow during level transition so it keeps up with the drop
-            const lerpSpeed = game.isTransitioning ? 0.1 : 0.05;
-            updateCamera(game.blockApi.mesh.position, lerpSpeed);
+    // Menu scene — 3D blocks on left side, orbit camera
+    if (menuBlock && (menuState === 'home' || menuState === 'levelSelect')) {
+        menuBlock.update(time);
+        if (menuGrid) menuGrid.updateTime(time);
+        const orbitSpeed = 0.12;
+        const cx = 2, cz = 1.5;
+        const radius = 5.5;
+        camera.position.set(
+            cx + Math.cos(time * orbitSpeed) * radius,
+            4.5,
+            cz + Math.sin(time * orbitSpeed) * radius
+        );
+        camera.lookAt(cx, 0.5, cz);
+        updateLighting(menuBlock.mesh.position);
+
+        // Shift view so 3D scene renders on the left ~40% of screen
+        const shift = Math.round(window.innerWidth * 0.28);
+        camera.setViewOffset(
+            window.innerWidth + shift, window.innerHeight,
+            shift, 0,
+            window.innerWidth, window.innerHeight
+        );
+    }
+
+    // Gameplay camera
+    if (menuState === 'game') {
+        if (game.isSplit && game.cubes) {
+            game.cubes.forEach((c, i) => c.update(time, i === game.activeCubeIndex));
+            const activeCube = game.cubes[game.activeCubeIndex];
+            updateCamera(activeCube.mesh.position);
+        } else if (game.blockApi) {
+            game.blockApi.update(time);
+            if (!game.blockApi.state.isFalling) {
+                const lerpSpeed = game.isTransitioning ? 0.1 : 0.05;
+                updateCamera(game.blockApi.mesh.position, lerpSpeed);
+            }
+        }
+
+        if (game.blockApi) {
+            updateLighting(game.blockApi.mesh.position);
         }
     }
 
