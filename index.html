@@ -9,11 +9,14 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
       :root {
-        --bg: #1a1a2e;
-        --text: #e8ecf2;
-        --text-dim: rgba(232, 236, 242, 0.35);
-        --accent-win: #6ee7b7;
-        --accent-fall: #fca5a5;
+        --bg: #D8E8F0;
+        --text: #2C3E50;
+        --text-dim: rgba(44, 62, 80, 0.4);
+        --accent-win: #27ae60;
+        --accent-fall: #e74c3c;
+        --accent-blue: #2980b9;
+        --accent-purple: #8e44ad;
+        --accent-cyan: #00acc1;
       }
 
       * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -31,7 +34,6 @@
         height: 100vh;
         position: relative;
       }
-      /* Vignette overlay — darker edges, brighter center */
       #canvas-container::after {
         content: '';
         position: absolute;
@@ -39,13 +41,132 @@
         background: radial-gradient(
           ellipse 70% 60% at 50% 50%,
           transparent 0%,
-          rgba(10, 10, 20, 0.5) 100%
+          rgba(180, 200, 220, 0.15) 100%
         );
         pointer-events: none;
       }
 
-      /* ─── UI Layer ─── */
-      #ui-overlay {
+      /* ─── Level Select ─── */
+      #level-select {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.4s ease, visibility 0.4s ease;
+        z-index: 20;
+      }
+      #level-select.visible {
+        opacity: 1;
+        visibility: visible;
+      }
+      #level-select::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: rgba(200, 220, 235, 0.88);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+
+      .ls-content {
+        position: relative;
+        z-index: 1;
+        text-align: center;
+      }
+
+      .ls-title {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 48px;
+        font-weight: 800;
+        color: var(--text);
+        letter-spacing: 6px;
+        margin-bottom: 6px;
+      }
+      .ls-subtitle {
+        font-family: 'Outfit', sans-serif;
+        font-size: 14px;
+        font-weight: 400;
+        color: var(--text-dim);
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        margin-bottom: 40px;
+      }
+
+      .level-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        max-width: 480px;
+        margin: 0 auto;
+      }
+
+      .level-btn {
+        position: relative;
+        background: rgba(255, 255, 255, 0.55);
+        border: 1px solid rgba(44, 62, 80, 0.1);
+        border-radius: 10px;
+        padding: 16px 10px 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        min-width: 100px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+      }
+      .level-btn:hover:not(.locked) {
+        background: rgba(255, 255, 255, 0.8);
+        border-color: rgba(44, 62, 80, 0.2);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+      }
+      .level-btn.locked {
+        opacity: 0.35;
+        cursor: not-allowed;
+      }
+      .level-btn.completed {
+        border-color: rgba(39, 174, 96, 0.35);
+        background: rgba(39, 174, 96, 0.08);
+      }
+
+      .level-num {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--text);
+        line-height: 1;
+      }
+      .level-btn.completed .level-num {
+        color: var(--accent-win);
+      }
+      .level-best {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 9px;
+        color: rgba(39, 174, 96, 0.6);
+      }
+      .level-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 9px;
+        font-weight: 500;
+        color: var(--text-dim);
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+      .level-lock {
+        font-size: 14px;
+        position: absolute;
+        top: 6px;
+        right: 8px;
+      }
+
+      /* ─── Game UI Layer ─── */
+      #game-ui {
         position: absolute;
         top: 0; left: 0;
         width: 100%; height: 100%;
@@ -53,15 +174,25 @@
         display: flex;
         flex-direction: column;
         align-items: center;
+        z-index: 10;
       }
 
-      /* ─── Move Counter ─── */
-      #move-counter {
-        margin-top: 36px;
+      /* ─── Top HUD ─── */
+      #top-hud {
+        margin-top: 28px;
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 2px;
+      }
+      #level-name {
+        font-family: 'Outfit', sans-serif;
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--text-dim);
+        letter-spacing: 3px;
+        text-transform: uppercase;
+        margin-bottom: 4px;
       }
       #move-number {
         font-family: 'JetBrains Mono', monospace;
@@ -70,7 +201,6 @@
         color: var(--text);
         line-height: 1;
         letter-spacing: -2px;
-        /* tabular nums so width doesn't jump */
         font-variant-numeric: tabular-nums;
       }
       #move-label {
@@ -93,22 +223,20 @@
         opacity: 0;
         visibility: hidden;
         transition: opacity 0.4s ease, visibility 0.4s ease;
+        pointer-events: none;
       }
       #status-overlay.visible {
         opacity: 1;
         visibility: visible;
       }
-
-      /* dim layer */
       #status-overlay::before {
         content: '';
         position: absolute;
         inset: 0;
-        background: rgba(20, 28, 42, 0.65);
+        background: rgba(200, 220, 235, 0.7);
         backdrop-filter: blur(6px);
         -webkit-backdrop-filter: blur(6px);
       }
-
       #status-content {
         position: relative;
         z-index: 1;
@@ -119,7 +247,6 @@
       #status-overlay.visible #status-content {
         transform: translateY(0);
       }
-
       #status-title {
         font-family: 'JetBrains Mono', monospace;
         font-size: 48px;
@@ -130,27 +257,25 @@
       }
       #status-title.win {
         color: var(--accent-win);
-        text-shadow: 0 0 60px rgba(110, 231, 183, 0.25);
+        text-shadow: 0 0 40px rgba(39, 174, 96, 0.2);
       }
       #status-title.fall {
         color: var(--accent-fall);
-        text-shadow: 0 0 60px rgba(252, 165, 165, 0.25);
+        text-shadow: 0 0 40px rgba(231, 76, 60, 0.2);
       }
-
       #status-subtitle {
         font-family: 'JetBrains Mono', monospace;
         font-size: 18px;
         font-weight: 500;
-        color: rgba(232, 236, 242, 0.55);
+        color: rgba(44, 62, 80, 0.6);
         letter-spacing: 3px;
         margin-bottom: 28px;
       }
-
       #status-hint {
         font-family: 'Outfit', sans-serif;
         font-size: 12px;
         font-weight: 500;
-        color: rgba(232, 236, 242, 0.2);
+        color: rgba(44, 62, 80, 0.35);
         letter-spacing: 3px;
         text-transform: uppercase;
       }
@@ -177,33 +302,67 @@
         min-width: 22px;
         height: 22px;
         padding: 0 6px;
-        border: 1px solid rgba(232, 236, 242, 0.12);
+        border: 1px solid rgba(44, 62, 80, 0.15);
         border-radius: 4px;
         font-family: 'JetBrains Mono', monospace;
         font-size: 9px;
         font-weight: 600;
-        color: rgba(232, 236, 242, 0.3);
-        background: rgba(232, 236, 242, 0.04);
+        color: rgba(44, 62, 80, 0.4);
+        background: rgba(255, 255, 255, 0.35);
       }
       .key-sep {
-        color: rgba(232, 236, 242, 0.12);
+        color: rgba(44, 62, 80, 0.15);
         font-size: 10px;
       }
       .key-desc {
         font-family: 'Outfit', sans-serif;
         font-size: 10px;
         font-weight: 500;
-        color: rgba(232, 236, 242, 0.18);
+        color: rgba(44, 62, 80, 0.3);
         letter-spacing: 1px;
         text-transform: uppercase;
+      }
+
+      /* ─── Split mode hint ─── */
+      #split-hint {
+        position: absolute;
+        top: 120px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: none;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: rgba(0, 172, 193, 0.1);
+        border: 1px solid rgba(0, 172, 193, 0.25);
+        border-radius: 8px;
+      }
+      #split-hint .key {
+        border-color: rgba(0, 172, 193, 0.35);
+        color: rgba(0, 172, 193, 0.7);
+      }
+      #split-hint .key-desc {
+        color: rgba(0, 172, 193, 0.5);
       }
     </style>
   </head>
   <body>
     <div id="canvas-container"></div>
-    <div id="ui-overlay">
 
-      <div id="move-counter">
+    <!-- Level Select -->
+    <div id="level-select">
+      <div class="ls-content">
+        <div class="ls-title">BLOXORZ</div>
+        <div class="ls-subtitle">A 3D Puzzle Game</div>
+        <div class="level-grid"></div>
+      </div>
+    </div>
+
+    <!-- Game UI -->
+    <div id="game-ui">
+
+      <div id="top-hud">
+        <div id="level-name"></div>
         <div id="move-number">0</div>
         <div id="move-label">moves</div>
       </div>
@@ -216,6 +375,12 @@
         </div>
       </div>
 
+      <!-- Split mode indicator -->
+      <div id="split-hint">
+        <span class="key">Space</span>
+        <span class="key-desc">switch cube</span>
+      </div>
+
       <div id="hint">
         <div class="key-group">
           <span class="key">&uarr;</span>
@@ -226,12 +391,23 @@
         </div>
         <span class="key-sep">&middot;</span>
         <div class="key-group">
+          <span class="key">Z</span>
+          <span class="key-desc">undo</span>
+        </div>
+        <span class="key-sep">&middot;</span>
+        <div class="key-group">
           <span class="key">R</span>
           <span class="key-desc">restart</span>
+        </div>
+        <span class="key-sep">&middot;</span>
+        <div class="key-group">
+          <span class="key">Esc</span>
+          <span class="key-desc">levels</span>
         </div>
       </div>
 
     </div>
+
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

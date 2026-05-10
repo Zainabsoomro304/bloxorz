@@ -12,6 +12,10 @@
     "vite": "^5.2.0"
   },
   "dependencies": {
-    "three": "^0.163.0"
+    "@pmndrs/vanilla": "^1.25.0",
+    "postprocessing": "^6.39.1",
+    "three": "^0.184.0",
+    "three-gpu-pathtracer": "^0.0.24",
+    "three-mesh-bvh": "^0.9.9"
   }
 }

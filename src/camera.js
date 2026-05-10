@@ -1,35 +1,40 @@
 import * as THREE from 'three';
 
-// Represents the "View" and "Projection" parts of the graphics pipeline
+// Perspective camera with smooth third-person following.
+// Works for both normal block and split-mode cubes — the caller just passes
+// whichever position should be tracked.
+
 export function createCamera() {
-    // Perspective projection setup: fov, aspect ratio, near clip, far clip
     const fov = 45;
     const aspect = window.innerWidth / window.innerHeight;
     const near = 0.1;
     const far = 1000;
-    
+
     const camera = new THREE.PerspectiveCamera(fov, aspect, near, far);
-    
-    // TPP Setup: Closer camera for better visibility
+
     const offset = new THREE.Vector3(-7, 11, 7);
-    
-    // Keep camera updated on window resize
+
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix(); // mandatory after changing aspect
+        camera.updateProjectionMatrix();
     });
 
-    // Update function to implement smooth following
-    function update(targetPosition) {
-        // Target camera position is block position + offset
+    let isStable = false;
+
+    function update(targetPosition, lerpSpeed = 0.05) {
         const targetCamPos = targetPosition.clone().add(offset);
-        
-        // Smoothly interpolate (lerp) from current position to target for smooth TPP
-        camera.position.lerp(targetCamPos, 0.05); // Play with weight for smoothness
-        
-        // Always orient the camera to look at the block
+        camera.position.lerp(targetCamPos, lerpSpeed);
+
+        // Snap when close enough so path tracing can converge
+        if (camera.position.distanceTo(targetCamPos) < 0.002) {
+            camera.position.copy(targetCamPos);
+            isStable = true;
+        } else {
+            isStable = false;
+        }
+
         camera.lookAt(targetPosition);
     }
 
-    return { camera, update, offset };
+    return { camera, update, offset, get isStable() { return isStable; } };
 }

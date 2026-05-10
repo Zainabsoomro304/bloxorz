@@ -1,83 +1,82 @@
 import * as THREE from 'three';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 export function createBlock(scene, startCol = 0, startRow = 0) {
-    // A 1x2x1 block (width: 1, height: 2, depth: 1)
-    const geometry = new THREE.BoxGeometry(1, 2, 1);
+    const geometry = new RoundedBoxGeometry(0.95, 1.95, 0.95, 2, 0.06);
 
-    // WebGL Custom Shader Material demonstrating vertex and fragment shaders
-    const customUniforms = {
-        time: { value: 0.0 },
-        baseColor: { value: new THREE.Color(0xef4444) }
-    };
-
-    const shaderMaterial = new THREE.ShaderMaterial({
-        uniforms: customUniforms,
-        vertexShader: `
-            varying vec2 vUv;
-            varying vec3 vNormal;
-            varying vec3 vWorldPos;
-            uniform float time;
-
-            void main() {
-                vUv = uv;
-                vNormal = normalize(normalMatrix * normal);
-                vWorldPos = (modelMatrix * vec4(position, 1.0)).xyz;
-
-                // Subtle vertex displacement for a breathing effect
-                vec3 pos = position;
-                float scale = 1.0 + 0.015 * sin(time * 2.5);
-                pos *= scale;
-
-                // Projection * View * Model transformations
-                gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
-            }
-        `,
-        fragmentShader: `
-            uniform float time;
-            uniform vec3 baseColor;
-            varying vec2 vUv;
-            varying vec3 vNormal;
-            varying vec3 vWorldPos;
-
-            void main() {
-                // Multi-directional lighting for better visibility
-                vec3 lightDir1 = normalize(vec3(1.0, 1.5, 0.5));
-                vec3 lightDir2 = normalize(vec3(-0.5, 0.8, -1.0));
-                float diffuse1 = max(dot(vNormal, lightDir1), 0.0);
-                float diffuse2 = max(dot(vNormal, lightDir2), 0.0) * 0.4;
-                float diffuse = diffuse1 + diffuse2;
-
-                // Subtle pulsing glow
-                float pulse = 0.06 * sin(time * 2.5);
-                vec3 glowColor = vec3(1.0, 0.7, 0.3) * pulse;
-
-                // Strong ambient so block is never too dark
-                vec3 finalColor = (baseColor + glowColor) * (diffuse * 0.5 + 0.55);
-
-                gl_FragColor = vec4(finalColor, 1.0);
-            }
-        `
+    const material = new THREE.MeshPhysicalMaterial({
+        color: 0xE84060,
+        metalness: 0.02,
+        roughness: 0.3,
+        clearcoat: 0.7,
+        clearcoatRoughness: 0.06,
+        envMapIntensity: 0.35,
     });
 
-    // Create mesh
-    const block = new THREE.Mesh(geometry, shaderMaterial);
+    const block = new THREE.Mesh(geometry, material);
     block.castShadow = true;
-
-    // Set initial position (standing upright, center at Y=1)
     block.position.set(startCol, 1, startRow);
+
     scene.add(block);
 
     const api = {
         mesh: block,
         state: {
-            orientation: 'standing', // 'standing', 'lying_x', 'lying_z'
+            orientation: 'standing',
             isAnimating: false,
-            isFalling: false
+            isFalling: false,
         },
         update(time) {
-            customUniforms.time.value = time;
-        }
+            // Subtle breathing
+            const scale = 1.0 + 0.005 * Math.sin(time * 2.5);
+            block.scale.setScalar(scale);
+        },
     };
 
     return api;
+}
+
+// 1x1x1 cube for split/teleport mode
+export function createCube(scene, col, row, colorHex = 0xf97316) {
+    const geometry = new RoundedBoxGeometry(0.82, 0.82, 0.82, 2, 0.06);
+
+    const material = new THREE.MeshPhysicalMaterial({
+        color: colorHex,
+        metalness: 0,
+        roughness: 0.5,
+        clearcoat: 0.35,
+        clearcoatRoughness: 0.2,
+        envMapIntensity: 0.2,
+    });
+
+    const cube = new THREE.Mesh(geometry, material);
+    cube.castShadow = true;
+    cube.position.set(col, 0.41, row);
+
+    scene.add(cube);
+
+    return {
+        mesh: cube,
+        material,
+        update(time, isActive) {
+            // Active cube pulses slightly brighter
+            const scale = isActive ? 1.0 + 0.008 * Math.sin(time * 4) : 1.0;
+            cube.scale.setScalar(scale);
+        },
+    };
+}
+
+// Quaternion helpers for setting block orientation after merge
+export function getOrientationQuaternion(orientation) {
+    const q = new THREE.Quaternion();
+    if (orientation === 'lying_x') {
+        q.setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2);
+    } else if (orientation === 'lying_z') {
+        q.setFromAxisAngle(new THREE.Vector3(1, 0, 0), Math.PI / 2);
+    }
+    return q;
+}
+
+export function getBlockYForOrientation(orientation) {
+    return orientation === 'standing' ? 1 : 0.5;
 }
