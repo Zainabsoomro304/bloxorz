@@ -49,6 +49,7 @@ const lsBackBtnEl     = document.getElementById('ls-back');
 const gameUiEl        = document.getElementById('game-ui');
 const splitHintEl     = document.getElementById('split-hint');
 const editorUiEl      = document.getElementById('editor-ui');
+const editBtnEl       = document.getElementById('edit-btn');
 
 // ── Scene, Camera, Lighting ─────────────────────────────────────────────────
 
@@ -163,6 +164,7 @@ const game = {
     isTransitioning: false,
     currentLevel: 0,
     moveHistory: [],
+    isCustomLevel: false,
 
     // Split mode
     isSplit: false,
@@ -379,6 +381,8 @@ lsBackBtnEl.addEventListener('click', () => {
 function startLevel(index) {
     if (menuState === 'transitioning') return;
     menuState = 'transitioning';
+    game.isCustomLevel = false;
+    if (editBtnEl) editBtnEl.style.display = 'none';
     levelSelectEl.classList.remove('visible');
     homeScreenEl.classList.remove('visible');
     gameUiEl.style.display = 'none';
@@ -857,7 +861,17 @@ function exitEditor() {
 
 function playCustomLevel() {
     const levelData = editor.getLevel();
-    if (!levelData) return;
+    if (!levelData) {
+        // Show what's missing
+        const edDesc = document.getElementById('ed-desc');
+        if (edDesc) {
+            const missing = [];
+            if (!editor.hasStart()) missing.push('start');
+            if (!editor.hasGoal()) missing.push('goal');
+            edDesc.innerHTML = `<span style="color:#e74c3c">Place a ${missing.join(' and ')} tile to play</span>`;
+        }
+        return;
+    }
     editor.exit();
     editorUiEl?.classList.remove('visible');
 
@@ -868,23 +882,53 @@ function playCustomLevel() {
     camera.updateProjectionMatrix();
 
     game.currentLevel = customIndex;
+    game.isCustomLevel = true;
     applyTheme(0);
     resetLevel();
     gameUiEl.style.display = '';
+    if (editBtnEl) editBtnEl.style.display = '';
     menuState = 'game';
     ptNeedsUpdate = true;
 }
 
+function backToEditor() {
+    cleanupGame();
+    game.isCustomLevel = false;
+    if (editBtnEl) editBtnEl.style.display = 'none';
+    menuState = 'editor';
+    homeScreenEl.classList.remove('visible');
+    levelSelectEl.classList.remove('visible');
+    gameUiEl.style.display = 'none';
+    statusOverlay.classList.remove('visible');
+    editorUiEl?.classList.add('visible');
+    editor.enter(true); // re-enter with preserved state
+    ptNeedsUpdate = true;
+}
+
 editorBtnEl?.addEventListener('click', () => enterEditor());
+editBtnEl?.addEventListener('click', () => backToEditor());
 document.getElementById('ed-back')?.addEventListener('click', () => exitEditor());
 document.getElementById('ed-play')?.addEventListener('click', () => playCustomLevel());
 document.getElementById('ed-clear')?.addEventListener('click', () => editor.clear());
+
+const toolDescriptions = {
+    normal:       '<span>Normal</span> — standard tile, supports any block position',
+    fragile:      '<span>Fragile</span> — breaks when the block stands upright on it',
+    goal:         '<span>Goal</span> — the hole the block must fall into to win',
+    start:        '<span>Start</span> — where the block spawns at the beginning',
+    soft_switch:  '<span>Soft Switch</span> — activates when any part of the block touches it, toggles all bridges',
+    heavy_switch: '<span>Heavy Switch</span> — only activates when standing upright, toggles all bridges',
+    bridge:       '<span>Bridge</span> — hidden tile that appears/disappears when a switch is activated',
+    eraser:       '<span>Eraser</span> — click tiles to remove them',
+};
+const edDescEl = document.getElementById('ed-desc');
 
 document.querySelectorAll('[data-tool]').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         editor.setTool(btn.dataset.tool);
+        if (edDescEl) edDescEl.innerHTML = toolDescriptions[btn.dataset.tool] || '';
     });
 });
 

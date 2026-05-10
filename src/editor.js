@@ -9,12 +9,15 @@ const TILE_W = 0.92;
 const TILE_H = 0.4;
 const TILE_Y = -TILE_H / 2;
 
-const TOOL_TYPES = { normal: 1, goal: 2, fragile: 3 };
+const TOOL_TYPES = { normal: 1, goal: 2, fragile: 3, soft_switch: 4, heavy_switch: 5, bridge: 1 };
 
 const TILE_COLORS = {
-    normal:  0xF0F0F0,
-    fragile: 0xF0D870,
-    goal:    0x40E0D0,
+    normal:       0xF0F0F0,
+    fragile:      0xF0D870,
+    goal:         0x40E0D0,
+    soft_switch:  0x4488EE,
+    heavy_switch: 0x9060D0,
+    bridge:       0xB8D0E0,
 };
 
 const CAMERA_POS = new THREE.Vector3(5, 14, 12);
@@ -46,6 +49,18 @@ function createTileMaterial(toolName) {
         opts.clearcoat = 0.3;
         opts.clearcoatRoughness = 0.2;
     }
+    if (toolName === 'soft_switch') {
+        opts.emissive = 0x3b82f6;
+        opts.emissiveIntensity = 0.4;
+    }
+    if (toolName === 'heavy_switch') {
+        opts.emissive = 0x8b5cf6;
+        opts.emissiveIntensity = 0.4;
+    }
+    if (toolName === 'bridge') {
+        opts.transparent = true;
+        opts.opacity = 0.5;
+    }
     return new THREE.MeshPhysicalMaterial(opts);
 }
 
@@ -69,8 +84,10 @@ export function createEditor(scene, camera, renderer) {
     let startPos = null;
     let goalPos = null;
     const tiles = {};        // "row,col" -> mesh
+    const bridgePositions = new Set(); // "row,col" keys for bridge tiles
     const ghostTiles = [];   // array of ghost plane meshes
     let editorGroup = null;
+    let preserveState = false; // true when re-entering from gameplay
 
     // Saved camera state
     let savedCamPos = null;
@@ -121,14 +138,27 @@ export function createEditor(scene, camera, renderer) {
             return;
         }
 
-        // Enforce single goal
+        // Enforce single goal — convert old goal back to normal tile
         if (currentTool === 'goal' && goalPos) {
             if (goalPos.row === row && goalPos.col === col) return;
-            removeTile(goalPos.row, goalPos.col);
+            const oldKey = `${goalPos.row},${goalPos.col}`;
+            removeTileVisual(oldKey);
+            editorLayout[goalPos.row][goalPos.col] = 1;
+            const normalMat = createTileMaterial('normal');
+            const normalMesh = new THREE.Mesh(tileGeometry, normalMat);
+            normalMesh.position.set(goalPos.col, TILE_Y, goalPos.row);
+            normalMesh.receiveShadow = true;
+            normalMesh.castShadow = true;
+            editorGroup.add(normalMesh);
+            tiles[oldKey] = normalMesh;
+            goalPos = null;
         }
 
         // Remove existing tile at this cell
-        if (tiles[key]) removeTileVisual(key);
+        if (tiles[key]) {
+            removeTileVisual(key);
+            bridgePositions.delete(key);
+        }
 
         // Update layout
         const type = TOOL_TYPES[currentTool] || 1;
@@ -136,6 +166,9 @@ export function createEditor(scene, camera, renderer) {
 
         if (currentTool === 'goal') {
             goalPos = { row, col };
+        }
+        if (currentTool === 'bridge') {
+            bridgePositions.add(key);
         }
 
         // Create 3D mesh
@@ -204,6 +237,7 @@ export function createEditor(scene, camera, renderer) {
         const key = `${row},${col}`;
         removeTileVisual(key);
         editorLayout[row][col] = 0;
+        bridgePositions.delete(key);
 
         if (startPos && startPos.row === row && startPos.col === col) {
             startPos = null;
@@ -260,7 +294,7 @@ export function createEditor(scene, camera, renderer) {
 
     // ── Public API ─────────────────────────────────────────────────────────
 
-    function enter() {
+    function enter(keepState = false) {
         if (active) return;
         active = true;
 
@@ -279,15 +313,46 @@ export function createEditor(scene, camera, renderer) {
         editorGroup = new THREE.Group();
         scene.add(editorGroup);
 
-        // Init state
-        initLayout();
-        startPos = null;
-        goalPos = null;
-        for (const key in tiles) delete tiles[key];
+        // Build ghost grid (always)
         ghostTiles.length = 0;
-
-        // Build ghost grid
         createGhostGrid();
+
+        if (!keepState || editorLayout.length === 0) {
+            // Fresh start
+            initLayout();
+            startPos = null;
+            goalPos = null;
+            bridgePositions.clear();
+            for (const key in tiles) delete tiles[key];
+        } else {
+            // Re-entering — rebuild visuals from saved state
+            for (const key in tiles) delete tiles[key];
+            for (let r = 0; r < editorLayout.length; r++) {
+                for (let c = 0; c < editorLayout[r].length; c++) {
+                    const t = editorLayout[r][c];
+                    if (t === 0) continue;
+                    const key = `${r},${c}`;
+                    let toolName = 'normal';
+                    if (t === 2) toolName = 'goal';
+                    else if (t === 3) toolName = 'fragile';
+                    else if (t === 4) toolName = 'soft_switch';
+                    else if (t === 5) toolName = 'heavy_switch';
+                    if (bridgePositions.has(key)) toolName = 'bridge';
+
+                    if (startPos && startPos.row === r && startPos.col === c) {
+                        placeStart(r, c);
+                    } else {
+                        const mat = createTileMaterial(toolName);
+                        const mesh = new THREE.Mesh(tileGeometry, mat);
+                        mesh.position.set(c, TILE_Y, r);
+                        mesh.receiveShadow = true;
+                        mesh.castShadow = true;
+                        editorGroup.add(mesh);
+                        tiles[key] = mesh;
+                    }
+                }
+            }
+        }
 
         // Event listeners
         const canvas = renderer.domElement;
@@ -301,13 +366,12 @@ export function createEditor(scene, camera, renderer) {
         active = false;
         mouseDown = false;
 
-        // Remove editor visuals
+        // Remove editor visuals (state is preserved in editorLayout/startPos/goalPos/bridgePositions)
         if (editorGroup) {
             scene.remove(editorGroup);
             editorGroup = null;
         }
 
-        // Clear references
         for (const key in tiles) delete tiles[key];
         ghostTiles.length = 0;
 
@@ -339,16 +403,45 @@ export function createEditor(scene, camera, renderer) {
     function getLevel() {
         if (!startPos || !goalPos) return null;
 
-        // Trim layout to bounding box of non-zero cells
+        // Build bridge and switch data
+        const bridgeKeys = [...bridgePositions];
+        const bridges = {};
+        for (const key of bridgeKeys) {
+            bridges[key] = false; // bridges start hidden
+        }
+
+        // Auto-link: every switch targets all bridge tiles
+        const switches = {};
+        for (let r = 0; r < GRID_ROWS; r++) {
+            for (let c = 0; c < GRID_COLS; c++) {
+                const t = editorLayout[r][c];
+                if (t === 4 || t === 5) {
+                    const key = `${r},${c}`;
+                    switches[key] = {
+                        type: t === 4 ? 'soft' : 'heavy',
+                        effect: 'toggle',
+                        targets: bridgeKeys,
+                    };
+                }
+            }
+        }
+
+        // In the layout, bridge cells should be 0 (empty) since they start hidden
+        const layout = editorLayout.map(row => [...row]);
+        for (const key of bridgeKeys) {
+            const [r, c] = key.split(',').map(Number);
+            layout[r][c] = 0;
+        }
+
         return {
             id: 'C',
             name: 'Custom Level',
             par: 99,
-            layout: editorLayout.map(row => [...row]),
+            layout,
             startRow: startPos.row,
             startCol: startPos.col,
-            switches: {},
-            bridges: {},
+            switches,
+            bridges,
         };
     }
 
@@ -357,19 +450,22 @@ export function createEditor(scene, camera, renderer) {
     }
 
     function clear() {
-        // Remove all placed tile meshes
         for (const key in tiles) {
             removeTileVisual(key);
         }
-
         initLayout();
         startPos = null;
         goalPos = null;
+        bridgePositions.clear();
     }
 
     function isActive() {
         return active;
     }
 
-    return { enter, exit, update, getLevel, isActive, setTool, clear };
+    return {
+        enter, exit, update, getLevel, isActive, setTool, clear,
+        hasStart() { return !!startPos; },
+        hasGoal() { return !!goalPos; },
+    };
 }
