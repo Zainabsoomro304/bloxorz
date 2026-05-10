@@ -5,35 +5,35 @@ import { getOrientationQuaternion, getBlockYForOrientation } from './block.js';
 // Manages input, block movement, switch/bridge logic, split mode, and undo.
 
 export function setupControls(game, callbacks) {
+    function processMove(dx, dz) {
+        if (game.isWon) return;
+        if (dx === 0 && dz === 0) return;
+
+        if (game.isSplit) {
+            const cubeApi = game.cubes[game.activeCubeIndex];
+            if (cubeApi._isAnimating) return;
+            animateCubeSlide(game, cubeApi, dx, dz, callbacks);
+        } else {
+            const blockApi = game.blockApi;
+            if (!blockApi || blockApi.state.isAnimating || blockApi.state.isFalling) return;
+            saveUndoState(game);
+            animateRoll(game, dx, dz, callbacks);
+        }
+    }
+
+    // ── Keyboard ────────────────────────────────────────────────────────────
     window.addEventListener('keydown', (e) => {
-        // R to restart — always allowed
-        if (e.key.toLowerCase() === 'r') {
-            callbacks.onReset();
-            return;
-        }
+        if (e.key.toLowerCase() === 'r') { callbacks.onReset(); return; }
+        if (e.key === 'Escape') { callbacks.onEscape(); return; }
+        if (e.key.toLowerCase() === 'z') { performUndo(game, callbacks); return; }
+        if (e.key.toLowerCase() === 'h') { callbacks.onHint?.(); return; }
 
-        // Escape — back to home screen
-        if (e.key === 'Escape') {
-            callbacks.onEscape();
-            return;
-        }
-
-        // Z — undo
-        if (e.key.toLowerCase() === 'z') {
-            performUndo(game, callbacks);
-            return;
-        }
-
-        // Space — toggle active cube in split mode
         if (e.key === ' ' && game.isSplit) {
             e.preventDefault();
             game.activeCubeIndex = game.activeCubeIndex === 0 ? 1 : 0;
             callbacks.onCubeSwitch?.();
             return;
         }
-
-        // Movement input
-        if (game.isWon) return;
 
         let dx = 0, dz = 0;
         switch (e.key.toLowerCase()) {
@@ -43,22 +43,43 @@ export function setupControls(game, callbacks) {
             case 'd': case 'arrowright': dx = 1;  break;
             default: return;
         }
-
-        if (dx === 0 && dz === 0) return;
         e.preventDefault();
+        processMove(dx, dz);
+    });
 
-        if (game.isSplit) {
-            // Split mode — move the active cube
-            const cubeApi = game.cubes[game.activeCubeIndex];
-            if (cubeApi._isAnimating) return;
-            animateCubeSlide(game, cubeApi, dx, dz, callbacks);
+    // ── Touch / swipe ───────────────────────────────────────────────────────
+    let touchStartX = 0, touchStartY = 0, touchActive = false;
+    const MIN_SWIPE = 30;
+
+    window.addEventListener('touchstart', (e) => {
+        if (e.touches.length !== 1) return;
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+        touchActive = true;
+    }, { passive: true });
+
+    window.addEventListener('touchmove', (e) => {
+        if (touchActive) e.preventDefault();
+    }, { passive: false });
+
+    window.addEventListener('touchend', (e) => {
+        if (!touchActive) return;
+        touchActive = false;
+        const touch = e.changedTouches[0];
+        const deltaX = touch.clientX - touchStartX;
+        const deltaY = touch.clientY - touchStartY;
+        const absX = Math.abs(deltaX);
+        const absY = Math.abs(deltaY);
+
+        if (Math.max(absX, absY) < MIN_SWIPE) return;
+
+        let dx = 0, dz = 0;
+        if (absX > absY) {
+            dx = deltaX > 0 ? 1 : -1;
         } else {
-            // Normal mode — move the block
-            const blockApi = game.blockApi;
-            if (!blockApi || blockApi.state.isAnimating || blockApi.state.isFalling) return;
-            saveUndoState(game);
-            animateRoll(game, dx, dz, callbacks);
+            dz = deltaY > 0 ? 1 : -1;
         }
+        processMove(dx, dz);
     });
 }
 
@@ -201,6 +222,7 @@ function animateRoll(game, dx, dz, callbacks) {
 
             // Landing squash — elastic settle for game-feel
             landingSquash(block);
+            callbacks.onLanding?.(block.position.clone());
 
             game.moves++;
             callbacks.onMoveCountChange(game.moves);
@@ -253,6 +275,7 @@ function validatePosition(game, blockApi, callbacks) {
 
         if (type === 3) {
             sounds.tileBreak();
+            callbacks.onFragileBreak?.(blockApi.mesh.position.clone());
             gridApi.removeTile(cell.row, cell.col);
             blockApi.state.isAnimating = true;
             // Block sinks slightly during tile break, then falls
@@ -288,7 +311,7 @@ function validatePosition(game, blockApi, callbacks) {
 
         if (type === 2) {
             sounds.win();
-            animateWin(blockApi, () => callbacks.onWin());
+            animateWin(blockApi, () => callbacks.onWin(), callbacks);
             return;
         }
     }
@@ -568,8 +591,9 @@ function animateFall(blockApi, onComplete, throughHole = false, validCells = [],
 
 // ── Win animation — satisfying sink into the goal ──────────────────────────
 
-function animateWin(blockApi, onComplete) {
+function animateWin(blockApi, onComplete, callbacks) {
     blockApi.state.isAnimating = true;
+    callbacks?.onWinEffect?.(blockApi.mesh.position.clone());
     const block = blockApi.mesh;
     const startPos = block.position.clone();
     const startTime = performance.now();

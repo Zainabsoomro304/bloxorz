@@ -393,10 +393,35 @@ export function createGrid(scene, levelData, animate = true, themeColors = null)
         });
     }
 
+    // ── Hint highlight ──
+
+    let highlightedTile = null;
+    let highlightOrigColor = null;
+
+    function highlightTile(row, col) {
+        clearHighlight();
+        const key = `${row},${col}`;
+        const tile = tiles[key];
+        if (!tile) return;
+        highlightedTile = tile;
+        highlightOrigColor = tile.material.emissive.clone();
+        tile.material.emissive.set(0x00ff88);
+        tile.material.emissiveIntensity = 0.6;
+    }
+
+    function clearHighlight() {
+        if (highlightedTile && highlightOrigColor) {
+            highlightedTile.material.emissive.copy(highlightOrigColor);
+            highlightedTile.material.emissiveIntensity = 0;
+            highlightedTile = null;
+            highlightOrigColor = null;
+        }
+    }
+
     return {
         gridGroup, levelLayout, tiles, goalTile, bridgeStates,
         getTileType, removeTile, addBridgeTile, removeBridgeTile,
         toggleBridges, getSwitchData, restoreLayout, updateTime,
-        fallAway, startRow, startCol,
+        fallAway, startRow, startCol, highlightTile, clearHighlight,
     };
 }

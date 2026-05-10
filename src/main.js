@@ -7,6 +7,10 @@ import { setupControls } from './controls.js';
 import { LEVELS } from './levels.js';
 import { THEMES } from './themes.js';
 import { sounds } from './sounds.js';
+import { createParticleManager } from './particles.js';
+import { createShakeManager } from './shake.js';
+import { solveBFS } from './solver.js';
+import { createEditor } from './editor.js';
 import * as THREE from 'three';
 
 // drei-vanilla
@@ -39,10 +43,12 @@ const moveNumberEl    = document.getElementById('move-number');
 const levelNameEl     = document.getElementById('level-name');
 const homeScreenEl    = document.getElementById('home-screen');
 const playBtnEl       = document.getElementById('play-btn');
+const editorBtnEl     = document.getElementById('editor-btn');
 const levelSelectEl   = document.getElementById('level-select');
 const lsBackBtnEl     = document.getElementById('ls-back');
 const gameUiEl        = document.getElementById('game-ui');
 const splitHintEl     = document.getElementById('split-hint');
+const editorUiEl      = document.getElementById('editor-ui');
 
 // ── Scene, Camera, Lighting ─────────────────────────────────────────────────
 
@@ -65,6 +71,15 @@ const sparkles = new Sparkles({
 sparkles.setPixelRatio(renderer.getPixelRatio());
 sparkles.position.set(3, 3, 1);
 scene.add(sparkles);
+
+// ── Particles & Shake ──────────────────────────────────────────────────────
+
+const particles = createParticleManager(scene);
+const shake = createShakeManager();
+
+// ── Editor ─────────────────────────────────────────────────────────────────
+
+const editor = createEditor(scene, camera, renderer);
 
 // ── Theme helpers ─────────────────────────────────────────────────────────
 
@@ -184,7 +199,7 @@ function isLevelUnlocked(index) {
 
 let menuBlock = null;
 let menuGrid = null;
-let menuState = 'home'; // 'home' | 'levelSelect' | 'transitioning' | 'game'
+let menuState = 'home'; // 'home' | 'levelSelect' | 'transitioning' | 'game' | 'editor'
 
 function createMenuScene() {
     const theme = THEMES[0];
@@ -626,11 +641,99 @@ function onMoveCountChange(count) {
 }
 
 function onFall() {
+    shake.trigger(0.15, 250);
     statusTitle.textContent = 'FELL OFF';
     statusTitle.className = 'fall';
     statusSubtitle.textContent = '';
     statusHint.textContent = 'Press R to restart';
     statusOverlay.classList.add('visible');
+}
+
+function onLanding(position) {
+    particles.emitDust(position);
+    shake.trigger(0.02, 80);
+    if (game.gridApi) game.gridApi.clearHighlight();
+}
+
+function onFragileBreak(position) {
+    particles.emitShatter(position, 0xF0D870);
+    shake.trigger(0.08, 150);
+}
+
+function onWinEffect(position) {
+    particles.emitCelebration(position);
+}
+
+function onHint() {
+    if (menuState !== 'game' || game.isWon || game.isSplit) return;
+    const blockApi = game.blockApi;
+    if (!blockApi || blockApi.state.isAnimating || blockApi.state.isFalling) return;
+
+    const levelData = LEVELS[game.currentLevel];
+    const gridApi = game.gridApi;
+
+    // Get current block position and orientation to determine start for solver
+    const pos = blockApi.mesh.position;
+    const orient = blockApi.state.orientation;
+
+    // For the solver, we need the current layout state (bridges may have changed)
+    const solution = solveBFS(
+        gridApi.levelLayout,
+        levelData.startRow,
+        levelData.startCol,
+        levelData.switches || {},
+        levelData.bridges || {}
+    );
+
+    if (!solution || solution.length === 0) return;
+
+    // Highlight the tile the first move leads to
+    // Solver returns moves from the START position, so we need to solve from current state
+    // Re-solve from current position by computing occupied cells
+    let curCol, curRow;
+    if (orient === 'standing') {
+        curRow = Math.round(pos.z);
+        curCol = Math.round(pos.x);
+    } else if (orient === 'lying_x') {
+        curRow = Math.round(pos.z);
+        curCol = Math.round(pos.x - 0.5);
+    } else {
+        curRow = Math.round(pos.z - 0.5);
+        curCol = Math.round(pos.x);
+    }
+
+    const fromCurrent = solveBFS(
+        gridApi.levelLayout,
+        curRow,
+        curCol,
+        levelData.switches || {},
+        gridApi.bridgeStates || {}
+    );
+
+    if (!fromCurrent || fromCurrent.length === 0) return;
+
+    const nextMove = fromCurrent[0];
+    // Compute where the block center will be after this move
+    let nx = pos.x, nz = pos.z;
+    if (orient === 'standing') {
+        nx += nextMove.dx * 1.5;
+        nz += nextMove.dz * 1.5;
+    } else if (orient === 'lying_x') {
+        if (nextMove.dx !== 0) {
+            nx += nextMove.dx * 1.5;
+        } else {
+            nz += nextMove.dz * 1.0;
+        }
+    } else {
+        if (nextMove.dz !== 0) {
+            nz += nextMove.dz * 1.5;
+        } else {
+            nx += nextMove.dx * 1.0;
+        }
+    }
+
+    // Highlight the target cell(s)
+    gridApi.highlightTile(Math.round(nz), Math.round(nx));
 }
 
 function onWin() {
@@ -665,6 +768,10 @@ function onReset() {
 
 function onEscape() {
     if (menuState === 'home') return;
+    if (menuState === 'editor') {
+        exitEditor();
+        return;
+    }
     if (menuState === 'levelSelect') {
         menuState = 'home';
         levelSelectEl.classList.remove('visible');
@@ -723,6 +830,64 @@ function onCubeSwitch() {
     // Visual feedback handled by cube.update() in animate loop
 }
 
+// ── Editor ──────────────────────────────────────────────────────────────────
+
+function enterEditor() {
+    if (menuState === 'transitioning') return;
+    cleanupGame();
+    cleanupMenuScene();
+    menuState = 'editor';
+    homeScreenEl.classList.remove('visible');
+    levelSelectEl.classList.remove('visible');
+    gameUiEl.style.display = 'none';
+    statusOverlay.classList.remove('visible');
+    editorUiEl?.classList.add('visible');
+    editor.enter();
+    ptNeedsUpdate = true;
+}
+
+function exitEditor() {
+    editor.exit();
+    editorUiEl?.classList.remove('visible');
+    ensureMenuScene();
+    applyTheme(0);
+    enterHomeState();
+    ptNeedsUpdate = true;
+}
+
+function playCustomLevel() {
+    const levelData = editor.getLevel();
+    if (!levelData) return;
+    editor.exit();
+    editorUiEl?.classList.remove('visible');
+
+    const customIndex = LEVELS.length;
+    LEVELS.push(levelData);
+    camera.clearViewOffset();
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+
+    game.currentLevel = customIndex;
+    applyTheme(0);
+    resetLevel();
+    gameUiEl.style.display = '';
+    menuState = 'game';
+    ptNeedsUpdate = true;
+}
+
+editorBtnEl?.addEventListener('click', () => enterEditor());
+document.getElementById('ed-back')?.addEventListener('click', () => exitEditor());
+document.getElementById('ed-play')?.addEventListener('click', () => playCustomLevel());
+document.getElementById('ed-clear')?.addEventListener('click', () => editor.clear());
+
+document.querySelectorAll('[data-tool]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-tool]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        editor.setTool(btn.dataset.tool);
+    });
+});
+
 // ── Controls ────────────────────────────────────────────────────────────────
 
 setupControls(game, {
@@ -734,6 +899,10 @@ setupControls(game, {
     onSplit,
     onMerge,
     onCubeSwitch,
+    onLanding,
+    onFragileBreak,
+    onWinEffect,
+    onHint,
 });
 
 // ── Start ───────────────────────────────────────────────────────────────────
@@ -792,6 +961,11 @@ function animate() {
         }
     }
 
+    // Editor
+    if (menuState === 'editor') {
+        editor.update(time);
+    }
+
     // Update tile emissive animations
     if (game.gridApi) {
         game.gridApi.updateTime(time);
@@ -800,11 +974,25 @@ function animate() {
     // Update sparkles
     sparkles.update(time);
 
+    // Update particles
+    particles.update(delta);
+
+    // Update screen shake and apply to camera
+    shake.update();
+    if (shake.isShaking) {
+        const off = shake.getOffset();
+        camera.position.x += off.x;
+        camera.position.y += off.y;
+        camera.position.z += off.z;
+    }
+
     // ── Path tracing management ──
     const isAnimating = game.isTransitioning
         || game.blockApi?.state.isAnimating
         || game.blockApi?.state.isFalling
-        || (game.isSplit && game.cubes?.some(c => c._isAnimating));
+        || (game.isSplit && game.cubes?.some(c => c._isAnimating))
+        || shake.isShaking
+        || particles.isActive;
 
     if (isAnimating || !cameraApi.isStable) {
         // Scene or camera in motion — pause path tracing, show rasterized

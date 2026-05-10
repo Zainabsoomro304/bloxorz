@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>Bloxorz 3D</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -10,10 +10,11 @@
     <style>
       :root {
         --bg: #D8E8F0;
-        --text: #2C3E50;
-        --text-dim: rgba(44, 62, 80, 0.4);
+        --text: #0f172a;
+        --text-dim: rgba(15, 23, 42, 0.45);
         --accent-win: #27ae60;
         --accent-fall: #e74c3c;
+        --ring: rgba(15, 23, 42, 0.12);
       }
 
       * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -29,6 +30,7 @@
         width: 100vw;
         height: 100vh;
         position: relative;
+        touch-action: none;
       }
 
       /* ─── Home Screen ─── */
@@ -54,49 +56,70 @@
         display: flex;
         flex-direction: column;
         align-items: flex-start;
-        padding-right: 8vw;
+        padding-right: 6vw;
         width: 42%;
         pointer-events: auto;
       }
 
       .home-title {
         font-family: 'JetBrains Mono', monospace;
-        font-size: 48px;
+        font-size: 52px;
         font-weight: 800;
         color: var(--text);
         letter-spacing: 14px;
         line-height: 1;
-        margin-bottom: 12px;
-      }
-      .home-tagline {
-        font-family: 'Outfit', sans-serif;
-        font-size: 13px;
-        font-weight: 400;
-        color: var(--text-dim);
-        letter-spacing: 2px;
-        margin-bottom: 40px;
+        margin-bottom: 48px;
       }
 
-      .play-btn {
+      .home-actions {
+        display: flex;
+        gap: 12px;
+      }
+
+      .btn-primary {
         font-family: 'Outfit', sans-serif;
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 600;
-        letter-spacing: 6px;
+        letter-spacing: 3px;
         text-transform: uppercase;
-        color: #fff;
+        color: #fafafa;
         background: var(--text);
         border: none;
-        border-radius: 40px;
-        padding: 14px 52px;
+        border-radius: 8px;
+        padding: 14px 36px;
         cursor: pointer;
-        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
       }
-      .play-btn:hover {
-        transform: scale(1.05);
-        box-shadow: 0 8px 30px rgba(44, 62, 80, 0.3);
+      .btn-primary:hover {
+        background: #1e293b;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 6px 16px rgba(0,0,0,0.1);
       }
-      .play-btn:active {
-        transform: scale(0.98);
+      .btn-primary:active {
+        transform: scale(0.97);
+      }
+
+      .btn-outline {
+        font-family: 'Outfit', sans-serif;
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text);
+        background: rgba(255,255,255,0.45);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid var(--ring);
+        border-radius: 8px;
+        padding: 13px 28px;
+        cursor: pointer;
+        transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+      }
+      .btn-outline:hover {
+        background: rgba(255,255,255,0.65);
+        border-color: rgba(15, 23, 42, 0.22);
+      }
+      .btn-outline:active {
+        transform: scale(0.97);
       }
 
       /* ─── Level Select ─── */
@@ -120,40 +143,51 @@
         visibility: visible;
       }
 
+      .ls-title {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--text);
+        letter-spacing: 5px;
+        text-transform: uppercase;
+        margin-bottom: 28px;
+      }
+
       .level-grid {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
-        gap: 24px;
+        gap: 14px;
         pointer-events: auto;
       }
 
       .level-btn {
-        width: 72px;
-        height: 72px;
-        border-radius: 50%;
+        width: 68px;
+        height: 68px;
+        border-radius: 14px;
         cursor: pointer;
-        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 0;
-        border: 3px solid rgba(44, 62, 80, 0.15);
-        background: rgba(255, 255, 255, 0.6);
+        border: 1px solid var(--ring);
+        background: rgba(255, 255, 255, 0.5);
         backdrop-filter: blur(8px);
         -webkit-backdrop-filter: blur(8px);
         position: relative;
       }
       .level-btn:hover:not(.locked) {
-        transform: scale(1.12);
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+        background: rgba(255, 255, 255, 0.8);
       }
       .level-btn:active:not(.locked) {
-        transform: scale(0.95);
+        transform: scale(0.96);
       }
       .level-btn.locked {
-        opacity: 0.2;
+        opacity: 0.25;
         cursor: not-allowed;
-        border-color: rgba(44, 62, 80, 0.08);
+        border-color: rgba(15, 23, 42, 0.04);
       }
       .level-btn.completed {
         border-color: transparent;
@@ -165,8 +199,8 @@
 
       .level-num {
         font-family: 'JetBrains Mono', monospace;
-        font-size: 26px;
-        font-weight: 800;
+        font-size: 24px;
+        font-weight: 700;
         line-height: 1;
         color: var(--text);
       }
@@ -176,30 +210,30 @@
         position: absolute;
         top: -4px;
         right: -4px;
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
         background: #f5c542;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 10px;
+        font-size: 9px;
         line-height: 1;
-        box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+        box-shadow: 0 1px 3px rgba(0,0,0,0.12);
       }
 
       .ls-back {
-        margin-top: 28px;
+        margin-top: 20px;
         font-family: 'Outfit', sans-serif;
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 500;
         color: var(--text-dim);
-        letter-spacing: 3px;
-        text-transform: uppercase;
         background: none;
         border: none;
         cursor: pointer;
         pointer-events: auto;
+        letter-spacing: 3px;
+        text-transform: uppercase;
         transition: color 0.15s;
       }
       .ls-back:hover {
@@ -381,6 +415,98 @@
       #split-hint .key-desc {
         color: rgba(0, 172, 193, 0.5);
       }
+
+      /* ─── Editor UI ─── */
+      #editor-ui {
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        pointer-events: none;
+        z-index: 20;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+      }
+      #editor-ui.visible {
+        opacity: 1;
+        visibility: visible;
+      }
+      .ed-toolbar {
+        position: absolute;
+        top: 28px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        background: rgba(255, 255, 255, 0.55);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.03);
+        pointer-events: auto;
+      }
+      .ed-tool {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        border: 1px solid transparent;
+        background: transparent;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        color: var(--text-dim);
+        transition: border-color 0.15s, background 0.15s, color 0.15s;
+      }
+      .ed-tool:hover { background: rgba(15,23,42,0.05); color: var(--text); }
+      .ed-tool.active { border-color: var(--ring); background: rgba(15,23,42,0.06); color: var(--text); }
+      .ed-sep {
+        width: 1px;
+        height: 24px;
+        background: var(--ring);
+        margin: 0 4px;
+      }
+      .ed-action {
+        font-family: 'Outfit', sans-serif;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+        padding: 7px 14px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.15s, transform 0.1s;
+        pointer-events: auto;
+      }
+      .ed-action.play {
+        background: var(--text);
+        color: #fafafa;
+        border: none;
+      }
+      .ed-action.play:hover { background: #1e293b; }
+      .ed-action.back {
+        background: transparent;
+        color: var(--text);
+        border: 1px solid var(--ring);
+      }
+      .ed-action.back:hover { background: rgba(15,23,42,0.04); }
+      .ed-label {
+        font-family: 'Outfit', sans-serif;
+        font-size: 9px;
+        font-weight: 500;
+        color: var(--text-dim);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        position: absolute;
+        bottom: 28px;
+        left: 50%;
+        transform: translateX(-50%);
+        pointer-events: none;
+      }
     </style>
   </head>
   <body>
@@ -390,15 +516,34 @@
     <div id="home-screen">
       <div class="home-content">
         <div class="home-title">BLOXORZ</div>
-        <div class="home-tagline">Navigate the block. Find the hole.</div>
-        <button class="play-btn" id="play-btn">PLAY</button>
+        <div class="home-actions">
+          <button class="btn-primary" id="play-btn">PLAY</button>
+          <button class="btn-outline" id="editor-btn">EDITOR</button>
+        </div>
       </div>
     </div>
 
     <!-- Level Select -->
     <div id="level-select">
+      <div class="ls-title">Select Level</div>
       <div class="level-grid"></div>
       <button class="ls-back" id="ls-back">BACK</button>
+    </div>
+
+    <!-- Editor UI -->
+    <div id="editor-ui">
+      <div class="ed-toolbar">
+        <button class="ed-tool active" data-tool="normal" title="Normal tile">&#9632;</button>
+        <button class="ed-tool" data-tool="fragile" title="Fragile tile">&#9674;</button>
+        <button class="ed-tool" data-tool="goal" title="Goal tile">&#9673;</button>
+        <button class="ed-tool" data-tool="start" title="Start position">&#9650;</button>
+        <button class="ed-tool" data-tool="eraser" title="Eraser">&#10005;</button>
+        <div class="ed-sep"></div>
+        <button class="ed-action play" id="ed-play">PLAY</button>
+        <button class="ed-action back" id="ed-clear">CLEAR</button>
+        <button class="ed-action back" id="ed-back">EXIT</button>
+      </div>
+      <div class="ed-label">Click to place tiles &middot; Esc to exit</div>
     </div>
 
     <!-- Game UI -->
@@ -442,6 +587,11 @@
         <div class="key-group">
           <span class="key">R</span>
           <span class="key-desc">restart</span>
+        </div>
+        <span class="key-sep">&middot;</span>
+        <div class="key-group">
+          <span class="key">H</span>
+          <span class="key-desc">hint</span>
         </div>
         <span class="key-sep">&middot;</span>
         <div class="key-group">
