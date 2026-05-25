@@ -378,6 +378,45 @@
         border-color: rgba(15,23,42,0.22);
       }
 
+      /* ─── Camera Toggle Button ─── */
+      #cam-toggle {
+        position: absolute;
+        top: 32px;
+        right: 36px;
+        font-family: 'Outfit', sans-serif;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--text);
+        background: rgba(255, 255, 255, 0.45);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        border: 1px solid var(--ring);
+        border-radius: 8px;
+        padding: 10px 18px;
+        cursor: pointer;
+        pointer-events: auto;
+        transition: background 0.15s, border-color 0.15s, transform 0.1s ease;
+        z-index: 30;
+        display: none; /* JS controlled */
+        align-items: center;
+        gap: 8px;
+      }
+      #cam-toggle:hover {
+        background: rgba(255, 255, 255, 0.65);
+        border-color: rgba(15, 23, 42, 0.22);
+      }
+      #cam-toggle:active {
+        transform: scale(0.97);
+      }
+      .cam-icon {
+        transition: transform 0.3s ease;
+      }
+      #cam-toggle:hover .cam-icon {
+        transform: rotate(15deg);
+      }
+
       /* ─── Bottom Controls ─── */
       #hint {
         position: absolute;
@@ -674,6 +713,14 @@
         <div id="move-label">moves</div>
       </div>
 
+      <button id="cam-toggle">
+        <svg class="cam-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+          <circle cx="12" cy="12" r="3"></circle>
+        </svg>
+        <span id="cam-text">3rd Person</span>
+      </button>
+
       <div id="status-overlay">
         <div id="status-content">
           <div id="status-title"></div>
@@ -712,6 +759,11 @@
         <div class="key-group">
           <span class="key">H</span>
           <span class="key-desc">hint</span>
+        </div>
+        <span class="key-sep">&middot;</span>
+        <div class="key-group">
+          <span class="key">C</span>
+          <span class="key-desc">camera</span>
         </div>
         <span class="key-sep">&middot;</span>
         <div class="key-group">

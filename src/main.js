@@ -50,6 +50,8 @@ const gameUiEl        = document.getElementById('game-ui');
 const splitHintEl     = document.getElementById('split-hint');
 const editorUiEl      = document.getElementById('editor-ui');
 const editBtnEl       = document.getElementById('edit-btn');
+const camToggleEl     = document.getElementById('cam-toggle');
+const camTextEl       = document.getElementById('cam-text');
 
 // ── Scene, Camera, Lighting ─────────────────────────────────────────────────
 
@@ -260,6 +262,7 @@ function showHomeScreen(fromGame = false) {
     homeScreenEl.classList.remove('visible');
     gameUiEl.style.display = 'none';
     statusOverlay.classList.remove('visible');
+    if (camToggleEl) camToggleEl.style.display = 'none';
 
     if (fromGame && menuState === 'game') {
         // Smooth camera swoosh from gameplay back to menu
@@ -365,6 +368,7 @@ function showLevelSelect() {
     homeScreenEl.classList.remove('visible');
     gameUiEl.style.display = 'none';
     statusOverlay.classList.remove('visible');
+    if (camToggleEl) camToggleEl.style.display = 'none';
     populateLevelSelect();
     levelSelectEl.classList.add('visible');
 }
@@ -435,6 +439,7 @@ function startLevel(index) {
 
         if (t >= 1) {
             gameUiEl.style.display = '';
+            if (camToggleEl) camToggleEl.style.display = 'flex';
             menuState = 'game';
             sounds.levelStart();
             ptNeedsUpdate = true;
@@ -457,6 +462,11 @@ function resetLevel() {
     applyTheme(game.currentLevel);
     game.gridApi = createGrid(scene, levelData, true, { tiles: theme.tiles, goal: theme.goal });
     game.blockApi = createBlock(scene, levelData.startCol, levelData.startRow, theme.block);
+    
+    // Reset camera heading and block translucency
+    cameraApi.resetHeading();
+    updateBlockOpacity();
+
     game.moves = 0;
     game.isWon = false;
     game.moveHistory = [];
@@ -831,7 +841,8 @@ function onMerge(r0, c0, r1, c1) {
 }
 
 function onCubeSwitch() {
-    // Visual feedback handled by cube.update() in animate loop
+    cameraApi.resetHeading();
+    updateBlockOpacity();
 }
 
 // ── Editor ──────────────────────────────────────────────────────────────────
@@ -845,6 +856,7 @@ function enterEditor() {
     levelSelectEl.classList.remove('visible');
     gameUiEl.style.display = 'none';
     statusOverlay.classList.remove('visible');
+    if (camToggleEl) camToggleEl.style.display = 'none';
     editorUiEl?.classList.add('visible');
     editor.enter();
     ptNeedsUpdate = true;
@@ -887,6 +899,7 @@ function playCustomLevel() {
     resetLevel();
     gameUiEl.style.display = '';
     if (editBtnEl) editBtnEl.style.display = '';
+    if (camToggleEl) camToggleEl.style.display = 'flex';
     menuState = 'game';
     ptNeedsUpdate = true;
 }
@@ -932,6 +945,72 @@ document.querySelectorAll('[data-tool]').forEach(btn => {
     });
 });
 
+// ── Camera perspective functions ─────────────────────────────────────────────
+
+function updateBlockOpacity() {
+    const isFpp = cameraApi.mode === 'fpp' && menuState === 'game';
+    if (game.blockApi && game.blockApi.mesh) {
+        game.blockApi.mesh.material.transparent = true;
+        game.blockApi.mesh.material.opacity = isFpp ? 0.25 : 1.0;
+        game.blockApi.mesh.material.needsUpdate = true;
+    }
+    if (game.cubes) {
+        game.cubes.forEach((c, idx) => {
+            c.material.transparent = true;
+            c.material.opacity = (isFpp && idx === game.activeCubeIndex) ? 0.25 : 1.0;
+            c.material.needsUpdate = true;
+        });
+    }
+}
+
+function toggleCameraMode() {
+    if (menuState !== 'game') return;
+    const newMode = cameraApi.mode === 'tpp' ? 'fpp' : 'tpp';
+    cameraApi.mode = newMode;
+    if (camTextEl) {
+        camTextEl.textContent = newMode === 'tpp' ? '3rd Person' : '1st Person';
+    }
+    updateBlockOpacity();
+
+    const canvas = container.querySelector('canvas');
+    if (canvas) {
+        if (newMode === 'fpp') {
+            canvas.requestPointerLock = canvas.requestPointerLock || canvas.mozRequestPointerLock || canvas.webkitRequestPointerLock;
+            canvas.requestPointerLock();
+        } else {
+            if (document.pointerLockElement === canvas) {
+                document.exitPointerLock();
+            }
+        }
+    }
+}
+
+if (camToggleEl) {
+    camToggleEl.addEventListener('click', toggleCameraMode);
+}
+
+// ── Pointer Lock Events ─────────────────────────────────────────────────────
+
+function handlePointerLockChange() {
+    const canvas = container.querySelector('canvas');
+    const isLocked = document.pointerLockElement === canvas;
+    if (!isLocked && cameraApi.mode === 'fpp') {
+        toggleCameraMode();
+    }
+}
+
+function handleMouseMove(e) {
+    const canvas = container.querySelector('canvas');
+    if (document.pointerLockElement === canvas) {
+        cameraApi.handleMouseMove(e);
+    }
+}
+
+document.addEventListener('pointerlockchange', handlePointerLockChange);
+document.addEventListener('mozpointerlockchange', handlePointerLockChange);
+document.addEventListener('webkitpointerlockchange', handlePointerLockChange);
+document.addEventListener('mousemove', handleMouseMove);
+
 // ── Controls ────────────────────────────────────────────────────────────────
 
 setupControls(game, {
@@ -947,7 +1026,8 @@ setupControls(game, {
     onFragileBreak,
     onWinEffect,
     onHint,
-});
+    onCameraToggle: toggleCameraMode,
+}, cameraApi);
 
 // ── Start ───────────────────────────────────────────────────────────────────
 
@@ -991,12 +1071,12 @@ function animate() {
         if (game.isSplit && game.cubes) {
             game.cubes.forEach((c, i) => c.update(time, i === game.activeCubeIndex));
             const activeCube = game.cubes[game.activeCubeIndex];
-            updateCamera(activeCube.mesh.position);
+            updateCamera(activeCube.mesh.position, 0.05, 'standing', true);
         } else if (game.blockApi) {
             game.blockApi.update(time);
             if (!game.blockApi.state.isFalling) {
                 const lerpSpeed = game.isTransitioning ? 0.1 : 0.05;
-                updateCamera(game.blockApi.mesh.position, lerpSpeed);
+                updateCamera(game.blockApi.mesh.position, lerpSpeed, game.blockApi.state.orientation, false);
             }
         }
 

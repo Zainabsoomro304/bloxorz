@@ -4,10 +4,34 @@ import { getOrientationQuaternion, getBlockYForOrientation } from './block.js';
 
 // Manages input, block movement, switch/bridge logic, split mode, and undo.
 
-export function setupControls(game, callbacks) {
+export function setupControls(game, callbacks, cameraApi) {
     function processMove(dx, dz) {
         if (game.isWon) return;
         if (dx === 0 && dz === 0) return;
+
+        // Translate movement relative to the decoupled horizontal FPP camera yaw if active
+        if (cameraApi && cameraApi.mode === 'fpp') {
+            const hDir = cameraApi.closestHeading; // returns { dx, dz } cardinally snapped
+            const hX = hDir.dx;
+            const hZ = hDir.dz;
+
+            const origDx = dx;
+            const origDz = dz;
+
+            if (origDz === -1) { // Forward
+                dx = hX;
+                dz = hZ;
+            } else if (origDz === 1) { // Backward
+                dx = -hX;
+                dz = -hZ;
+            } else if (origDx === -1) { // Leftward
+                dx = hZ;
+                dz = -hX;
+            } else if (origDx === 1) { // Rightward
+                dx = -hZ;
+                dz = hX;
+            }
+        }
 
         if (game.isSplit) {
             const cubeApi = game.cubes[game.activeCubeIndex];
@@ -27,6 +51,7 @@ export function setupControls(game, callbacks) {
         if (e.key === 'Escape') { callbacks.onEscape(); return; }
         if (e.key.toLowerCase() === 'z') { performUndo(game, callbacks); return; }
         if (e.key.toLowerCase() === 'h') { callbacks.onHint?.(); return; }
+        if (e.key.toLowerCase() === 'c') { callbacks.onCameraToggle?.(); return; }
 
         if (e.key === ' ' && game.isSplit) {
             e.preventDefault();

@@ -1,0 +1,885 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>Bloxorz 3D</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #D8E8F0;
+      --text: #0f172a;
+      --text-dim: rgba(15, 23, 42, 0.45);
+      --accent-win: #27ae60;
+      --accent-fall: #e74c3c;
+      --ring: rgba(15, 23, 42, 0.12);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      overflow: hidden;
+      background: var(--bg);
+      font-family: 'Outfit', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    #canvas-container {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+      touch-action: none;
+    }
+
+    /* ─── Home Screen ─── */
+    #home-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      z-index: 20;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.6s ease, visibility 0.6s ease;
+    }
+
+    #home-screen.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .home-content {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      padding-right: 6vw;
+      width: 42%;
+      pointer-events: auto;
+    }
+
+    .home-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 52px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: 14px;
+      line-height: 1;
+      margin-bottom: 48px;
+    }
+
+    .home-actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-primary {
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #fafafa;
+      background: var(--text);
+      border: none;
+      border-radius: 8px;
+      padding: 14px 36px;
+      cursor: pointer;
+      transition: background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+    }
+
+    .btn-primary:hover {
+      background: #1e293b;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 6px 16px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-primary:active {
+      transform: scale(0.97);
+    }
+
+    .btn-outline {
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.45);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--ring);
+      border-radius: 8px;
+      padding: 13px 28px;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+    }
+
+    .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.65);
+      border-color: rgba(15, 23, 42, 0.22);
+    }
+
+    .btn-outline:active {
+      transform: scale(0.97);
+    }
+
+    /* ─── Level Select ─── */
+    #level-select {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: center;
+      padding-right: 8vw;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
+      z-index: 20;
+      pointer-events: none;
+    }
+
+    #level-select.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .ls-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: 5px;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+    }
+
+    .level-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      pointer-events: auto;
+    }
+
+    .level-btn {
+      width: 68px;
+      height: 68px;
+      border-radius: 14px;
+      cursor: pointer;
+      transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      border: 1px solid var(--ring);
+      background: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      position: relative;
+    }
+
+    .level-btn:hover:not(.locked) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
+      background: rgba(255, 255, 255, 0.8);
+    }
+
+    .level-btn:active:not(.locked) {
+      transform: scale(0.96);
+    }
+
+    .level-btn.locked {
+      opacity: 0.25;
+      cursor: not-allowed;
+      border-color: rgba(15, 23, 42, 0.04);
+    }
+
+    .level-btn.completed {
+      border-color: transparent;
+      color: #fff;
+    }
+
+    .level-btn.completed .level-num {
+      color: #fff;
+    }
+
+    .level-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    /* Star for par or better */
+    .level-star {
+      position: absolute;
+      top: -4px;
+      right: -4px;
+      width: 18px;
+      height: 18px;
+      background: #f5c542;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      line-height: 1;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    }
+
+    .ls-back {
+      margin-top: 20px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-dim);
+      background: none;
+      border: none;
+      cursor: pointer;
+      pointer-events: auto;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      transition: color 0.15s;
+    }
+
+    .ls-back:hover {
+      color: var(--text);
+    }
+
+    /* ─── Game UI Layer ─── */
+    #game-ui {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* ─── Top HUD ─── */
+    #top-hud {
+      position: absolute;
+      top: 32px;
+      left: 36px;
+    }
+
+    #level-name {
+      font-family: 'Outfit', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-dim);
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .hud-sep {
+      display: none;
+    }
+
+    #move-number {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 120px;
+      font-weight: 800;
+      color: var(--text);
+      line-height: 0.85;
+      letter-spacing: -6px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    #move-label {
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-dim);
+      letter-spacing: 6px;
+      text-transform: uppercase;
+    }
+
+    /* ─── Status Overlay (win / fall) ─── */
+    #status-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
+      pointer-events: none;
+    }
+
+    #status-overlay.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    #status-overlay::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(200, 220, 235, 0.7);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+
+    #status-content {
+      position: relative;
+      z-index: 1;
+      text-align: center;
+      transform: translateY(12px);
+      transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    #status-overlay.visible #status-content {
+      transform: translateY(0);
+    }
+
+    #status-title {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 48px;
+      font-weight: 800;
+      letter-spacing: 8px;
+      text-transform: uppercase;
+      margin-bottom: 14px;
+    }
+
+    #status-title.win {
+      color: var(--accent-win);
+      text-shadow: 0 0 40px rgba(39, 174, 96, 0.2);
+    }
+
+    #status-title.fall {
+      color: var(--accent-fall);
+      text-shadow: 0 0 40px rgba(231, 76, 60, 0.2);
+    }
+
+    #status-subtitle {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 18px;
+      font-weight: 500;
+      color: rgba(44, 62, 80, 0.6);
+      letter-spacing: 3px;
+      margin-bottom: 28px;
+    }
+
+    #status-hint {
+      font-family: 'Outfit', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      color: rgba(44, 62, 80, 0.35);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    /* ─── Edit button (custom levels) ─── */
+    .edit-btn {
+      position: absolute;
+      bottom: 56px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Outfit', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.5);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--ring);
+      border-radius: 6px;
+      padding: 8px 18px;
+      cursor: pointer;
+      pointer-events: auto;
+      transition: background 0.15s, border-color 0.15s;
+    }
+
+    .edit-btn:hover {
+      background: rgba(255, 255, 255, 0.75);
+      border-color: rgba(15, 23, 42, 0.22);
+    }
+
+    /* ─── Camera Toggle Button ─── */
+    #cam-toggle {
+      position: absolute;
+      top: 32px;
+      right: 36px;
+      font-family: 'Outfit', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.45);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border: 1px solid var(--ring);
+      border-radius: 8px;
+      padding: 10px 18px;
+      cursor: pointer;
+      pointer-events: auto;
+      transition: background 0.15s, border-color 0.15s, transform 0.1s ease;
+      z-index: 30;
+      display: none;
+      /* JS controlled */
+      align-items: center;
+      gap: 8px;
+    }
+
+    #cam-toggle:hover {
+      background: rgba(255, 255, 255, 0.65);
+      border-color: rgba(15, 23, 42, 0.22);
+    }
+
+    #cam-toggle:active {
+      transform: scale(0.97);
+    }
+
+    .cam-icon {
+      transition: transform 0.3s ease;
+    }
+
+    #cam-toggle:hover .cam-icon {
+      transform: rotate(15deg);
+    }
+
+    /* ─── Bottom Controls ─── */
+    #hint {
+      position: absolute;
+      bottom: 22px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .key-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .key {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      border: 1px solid rgba(44, 62, 80, 0.15);
+      border-radius: 4px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 9px;
+      font-weight: 600;
+      color: rgba(44, 62, 80, 0.4);
+      background: rgba(255, 255, 255, 0.35);
+    }
+
+    .key-sep {
+      color: rgba(44, 62, 80, 0.15);
+      font-size: 10px;
+    }
+
+    .key-desc {
+      font-family: 'Outfit', sans-serif;
+      font-size: 10px;
+      font-weight: 500;
+      color: rgba(44, 62, 80, 0.3);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    /* ─── Split mode hint ─── */
+    #split-hint {
+      position: absolute;
+      top: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: rgba(0, 172, 193, 0.1);
+      border: 1px solid rgba(0, 172, 193, 0.25);
+      border-radius: 8px;
+    }
+
+    #split-hint .key {
+      border-color: rgba(0, 172, 193, 0.35);
+      color: rgba(0, 172, 193, 0.7);
+    }
+
+    #split-hint .key-desc {
+      color: rgba(0, 172, 193, 0.5);
+    }
+
+    /* ─── Editor UI ─── */
+    #editor-ui {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 20;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+    }
+
+    #editor-ui.visible {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .ed-toolbar {
+      position: absolute;
+      top: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      padding: 0;
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 14px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
+      pointer-events: auto;
+      overflow: hidden;
+    }
+
+    .ed-tool {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 12px 18px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      transition: background 0.15s;
+      position: relative;
+    }
+
+    .ed-tool:hover {
+      background: rgba(15, 23, 42, 0.04);
+    }
+
+    .ed-tool.active {
+      background: rgba(15, 23, 42, 0.07);
+    }
+
+    .ed-tool.active::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 20%;
+      right: 20%;
+      height: 2px;
+      background: var(--text);
+      border-radius: 2px;
+    }
+
+    .ed-swatch {
+      width: 22px;
+      height: 22px;
+      border-radius: 5px;
+      border: 1px solid rgba(15, 23, 42, 0.1);
+    }
+
+    .ed-swatch.normal {
+      background: #e8e8e8;
+    }
+
+    .ed-swatch.fragile {
+      background: #F0D870;
+    }
+
+    .ed-swatch.goal {
+      background: #40E0D0;
+    }
+
+    .ed-swatch.start {
+      background: #E03030;
+    }
+
+    .ed-swatch.soft {
+      background: #4488EE;
+    }
+
+    .ed-swatch.heavy {
+      background: #9060D0;
+    }
+
+    .ed-swatch.bridge {
+      background: repeating-linear-gradient(45deg, #B8D0E0, #B8D0E0 3px, #d0e0ea 3px, #d0e0ea 6px);
+      opacity: 0.7;
+    }
+
+    .ed-swatch.eraser {
+      background: transparent;
+      border: 1.5px dashed rgba(15, 23, 42, 0.25);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      color: rgba(15, 23, 42, 0.4);
+    }
+
+    .ed-tool-label {
+      font-family: 'Outfit', sans-serif;
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+
+    .ed-tool.active .ed-tool-label {
+      color: var(--text);
+    }
+
+    .ed-sep {
+      width: 1px;
+      background: rgba(15, 23, 42, 0.08);
+      margin: 8px 0;
+    }
+
+    .ed-action {
+      font-family: 'Outfit', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      padding: 12px 20px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      transition: background 0.15s;
+      color: var(--text-dim);
+    }
+
+    .ed-action:hover {
+      background: rgba(15, 23, 42, 0.04);
+      color: var(--text);
+    }
+
+    .ed-action.play {
+      color: var(--accent-win);
+      font-weight: 700;
+    }
+
+    .ed-action.play:hover {
+      background: rgba(39, 174, 96, 0.06);
+    }
+
+    .ed-label {
+      font-family: 'Outfit', sans-serif;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--text-dim);
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      position: absolute;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%);
+      pointer-events: none;
+      white-space: nowrap;
+    }
+
+    .ed-desc {
+      position: absolute;
+      top: 90px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 8px;
+      padding: 10px 18px;
+      pointer-events: none;
+      white-space: nowrap;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+
+    .ed-desc span {
+      font-weight: 600;
+    }
+  </style>
+  <script type="module" crossorigin src="/assets/index-BOejV4sf.js"></script>
+</head>
+
+<body>
+  <div id="canvas-container"></div>
+
+  <!-- Home Screen — 3D blocks on left, UI on right -->
+  <div id="home-screen">
+    <div class="home-content">
+      <div class="home-title">BLOXORZ</div>
+      <div class="home-actions">
+        <button class="btn-primary" id="play-btn">PLAY</button>
+        <button class="btn-outline" id="editor-btn">EDITOR</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Level Select -->
+  <div id="level-select">
+    <div class="ls-title">Select Level</div>
+    <div class="level-grid"></div>
+    <button class="ls-back" id="ls-back">BACK</button>
+  </div>
+
+  <!-- Editor UI -->
+  <div id="editor-ui">
+    <div class="ed-toolbar">
+      <button class="ed-tool active" data-tool="normal">
+        <div class="ed-swatch normal"></div>
+        <span class="ed-tool-label">Normal</span>
+      </button>
+      <button class="ed-tool" data-tool="fragile">
+        <div class="ed-swatch fragile"></div>
+        <span class="ed-tool-label">Fragile</span>
+      </button>
+      <button class="ed-tool" data-tool="goal">
+        <div class="ed-swatch goal"></div>
+        <span class="ed-tool-label">Goal</span>
+      </button>
+      <button class="ed-tool" data-tool="start">
+        <div class="ed-swatch start"></div>
+        <span class="ed-tool-label">Start</span>
+      </button>
+      <button class="ed-tool" data-tool="soft_switch">
+        <div class="ed-swatch soft"></div>
+        <span class="ed-tool-label">Soft Sw.</span>
+      </button>
+      <button class="ed-tool" data-tool="heavy_switch">
+        <div class="ed-swatch heavy"></div>
+        <span class="ed-tool-label">Heavy Sw.</span>
+      </button>
+      <button class="ed-tool" data-tool="bridge">
+        <div class="ed-swatch bridge"></div>
+        <span class="ed-tool-label">Bridge</span>
+      </button>
+      <button class="ed-tool" data-tool="eraser">
+        <div class="ed-swatch eraser">&times;</div>
+        <span class="ed-tool-label">Erase</span>
+      </button>
+      <div class="ed-sep"></div>
+      <button class="ed-action play" id="ed-play">Play</button>
+      <button class="ed-action" id="ed-clear">Clear</button>
+      <button class="ed-action" id="ed-back">Exit</button>
+    </div>
+    <div class="ed-desc" id="ed-desc"><span>Normal</span> — standard tile, supports any block position</div>
+    <div class="ed-label">Click or drag to place tiles &middot; Esc to exit</div>
+  </div>
+
+  <!-- Game UI -->
+  <div id="game-ui">
+
+    <div id="top-hud">
+      <div id="level-name"></div>
+      <div class="hud-sep"></div>
+      <div id="move-number">0</div>
+      <div id="move-label">moves</div>
+    </div>
+
+    <button id="cam-toggle">
+      <svg class="cam-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+        <circle cx="12" cy="12" r="3"></circle>
+      </svg>
+      <span id="cam-text">3rd Person</span>
+    </button>
+
+    <div id="status-overlay">
+      <div id="status-content">
+        <div id="status-title"></div>
+        <div id="status-subtitle"></div>
+        <div id="status-hint"></div>
+      </div>
+    </div>
+
+    <!-- Split mode indicator -->
+    <div id="split-hint">
+      <span class="key">Space</span>
+      <span class="key-desc">switch cube</span>
+    </div>
+
+    <button id="edit-btn" class="edit-btn" style="display:none;">BACK TO EDITOR</button>
+
+    <div id="hint">
+      <div class="key-group">
+        <span class="key">&uarr;</span>
+        <span class="key">&darr;</span>
+        <span class="key">&larr;</span>
+        <span class="key">&rarr;</span>
+        <span class="key-desc">move</span>
+      </div>
+      <span class="key-sep">&middot;</span>
+      <div class="key-group">
+        <span class="key">Z</span>
+        <span class="key-desc">undo</span>
+      </div>
+      <span class="key-sep">&middot;</span>
+      <div class="key-group">
+        <span class="key">R</span>
+        <span class="key-desc">restart</span>
+      </div>
+      <span class="key-sep">&middot;</span>
+      <div class="key-group">
+        <span class="key">H</span>
+        <span class="key-desc">hint</span>
+      </div>
+      <span class="key-sep">&middot;</span>
+      <div class="key-group">
+        <span class="key">C</span>
+        <span class="key-desc">camera</span>
+      </div>
+      <span class="key-sep">&middot;</span>
+      <div class="key-group">
+        <span class="key">Esc</span>
+        <span class="key-desc">levels</span>
+      </div>
+    </div>
+
+  </div>
+
+
+</body>
+
+</html>
