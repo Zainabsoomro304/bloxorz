@@ -20,14 +20,14 @@ The final project includes:
 - Fragile tiles, soft switches, heavy switches, bridges, and teleport split mode.
 - A custom level editor.
 - Saved progress and best move counts using localStorage.
-- Keyboard, touch, and third-person camera controls.
+- Keyboard, touch, and a smooth third-person follow camera.
 - Solver based hints for non-teleport levels.
 - A validation script that checks all official levels, including the split level.
-- Lighting, shadows, physical materials, fog, bloom, vignette, SMAA, particles, and optional path tracing.
+- Lighting, shadows, physical materials, fog, bloom, vignette, SMAA, particles, and a guarded path tracing integration.
 
 ## 2. System overview
 
-The project is a Vite application. Three.js is used for the scene, camera, geometry, materials, shadows, and rendering. The postprocessing library is used for the render pass, anti-aliasing, bloom, and vignette. The optional path tracing mode uses three-gpu-pathtracer.
+The project is a Vite application. Three.js is used for the scene, camera, geometry, materials, shadows, and rendering. The postprocessing library is used for the render pass, anti-aliasing, bloom, and vignette. A guarded path tracing integration through three-gpu-pathtracer is present, while the presentation build uses the stable rasterized renderer for interaction.
 
 The code is split by responsibility:
 
@@ -50,7 +50,7 @@ The game has four main user facing states.
 
 - Home screen. It shows the Bloxorz title, a 3D preview scene, and buttons for Play and Editor.
 - Level select. It shows eight levels. Locked levels are dimmed. Completed levels are marked, and a star appears when the player reaches par or better.
-- Gameplay. It shows the current level name, move counter, camera toggle, key hints, split mode hint when needed, and win or fall overlays.
+- Gameplay. It shows the current level name, move counter, key hints, split mode hint when needed, and win or fall overlays.
 - Editor. It shows the editor toolbar, tool descriptions, Play, Clear, and Exit buttons.
 
 Progress is saved in localStorage. The game stores completed levels and best move counts. This lets the level select screen show progress after a reload.
@@ -203,7 +203,7 @@ Transformations are used throughout the project.
 
 The block movement uses translation and rotation. The animation updates position and quaternion values across time. When the block falls, the code may rotate it around an edge before applying a downward fall.
 
-The camera also uses transforms. In third person mode, the camera follows the active block or cube from an offset. It looks at the target position and lerps toward the desired position. In first person mode, pointer movement changes yaw and pitch. The camera is placed near the active object and looks along the computed direction.
+The camera also uses transforms. In third-person mode, the camera follows the active block or cube from an offset. It computes a target camera position and a target look-at point, then lerps toward both values so the board stays readable while the block moves.
 
 The camera is not tied to gameplay direction remapping. Movement stays grid-based and always follows the puzzle logic directly.
 
@@ -236,11 +236,11 @@ Sound effects are procedural. They use the Web Audio API, oscillators, noise buf
 
 Screen shake is used lightly for landing, fragile tile break, and falling. It offsets the camera for a short time and decays quickly.
 
-## 13. Optional path tracing
+## 13. Raster rendering and path tracing integration
 
-The project includes an optional path tracing mode through `three-gpu-pathtracer`. It is not used as the main interaction renderer. During animation, camera movement, particles, and shaking, the game uses the rasterized renderer with postprocessing. When the scene is stable, the path tracer can resume and accumulate samples.
+The main renderer is real-time rasterization through WebGL and Three.js. This is the renderer used for gameplay, animation, particles, postprocessing, and the live demo.
 
-This connects to the ray and path tracing lecture. Rasterization is fast and reliable for interaction. Path tracing can give a more physically based result, but it is heavier and has stricter scene requirements. The implementation is guarded so that if path tracing fails, the game falls back to the regular renderer.
+The project also contains a guarded setup for `three-gpu-pathtracer`. This connects to the ray and path tracing lecture, but it is kept secondary because path tracing is heavier and less suitable for continuous interaction. Rasterization is fast and reliable for the playable game, while the path tracing code shows awareness of the alternative rendering approach and falls back safely if unsupported.
 
 ## 14. Solver and validation
 
@@ -301,7 +301,7 @@ When the player presses Z, the game restores that snapshot. Undo is disabled dur
 
 The project was checked in several ways.
 
-`npm run build` confirms the project builds as a production Vite app. The current build passes. Vite reports a large chunk warning because the optional path tracing dependency is heavy. This is a warning, not a build failure.
+`npm run build` confirms the project builds as a production Vite app. The current build passes. Vite reports a large chunk warning because the path tracing dependency is heavy. This is a warning, not a build failure.
 
 `npm run check:levels` verifies all official level par values. The command passes for all eight official levels.
 
@@ -317,7 +317,7 @@ The project is complete enough for the course demonstration, but there are still
 - Let the editor choose which bridge tiles each switch controls.
 - Add import and export for custom levels.
 - Add more official levels.
-- Add code splitting so the optional path tracing dependency does not increase the main bundle size.
+- Add code splitting so the path tracing dependency does not increase the main bundle size.
 - Add optional texture assets for tiles, while keeping the current clean procedural style.
 - Add a level preview in the editor before pressing Play.
 
@@ -329,6 +329,6 @@ Bloxorz 3D combines exact puzzle logic with real time 3D graphics. The game stat
 
 The project also includes features that make it feel complete: level progression, saved progress, an editor, a third-person camera, mobile input, procedural sound, and automated level checking.
 
-From a Computer Graphics point of view, the project demonstrates the full path from scene data to final pixels. It uses geometry, model transforms, view and projection, rasterization, fragment shading through Three.js materials, frame buffer output, event driven input, and an optional path tracing comparison.
+From a Computer Graphics point of view, the project demonstrates the full path from scene data to final pixels. It uses geometry, model transforms, view and projection, rasterization, fragment shading through Three.js materials, frame buffer output, event driven input, and a guarded path tracing integration for comparison.
 
 Most importantly, it is playable. The player can start at the menu, select a level, solve puzzles, see feedback, unlock progress, build a custom level, and demonstrate the implementation live.

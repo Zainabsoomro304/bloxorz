@@ -166,7 +166,7 @@
     <pre>8 official levels with verified par values
 rolling cuboid with exact grid rules
 fragile tiles, switches, bridges, teleport split mode
-keyboard, touch, orbit camera, third-person camera
+keyboard, touch, smooth third-person camera
 saved progress and custom level editor
 hint system based on shortest-path search</pre>
   </section>
@@ -238,7 +238,7 @@ DirectionalLight, AmbientLight, shadows, fog
 SMAA, bloom, and vignette postprocessing
 dust, shatter, sparkles, and win particles
 procedural audio for movement and switches
-optional GPU path tracing with clean fallback</pre>
+guarded path tracing integration with fallback</pre>
   </section>
 
   <section class="slide">
@@ -247,10 +247,9 @@ optional GPU path tracing with clean fallback</pre>
     <div class="space"></div>
     <pre>keyboard controls for desktop
 touch controls for mobile
-orbit camera for board inspection
-third-person camera
+smooth third-person follow camera
 HUD for moves, par, level, and hints
-localStorage for progress and custom levels</pre>
+localStorage for progress and best moves</pre>
   </section>
 
   <section class="slide small">
@@ -318,7 +317,7 @@ scripts/check-levels.js   automated level verification</pre>
 4. switch and bridge behavior
 5. teleport split and merge
 6. hint system
-7. editor and third-person camera</pre>
+7. editor and camera framing</pre>
   </section>
 
   <section class="slide">
