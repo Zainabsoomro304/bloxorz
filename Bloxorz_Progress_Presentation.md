@@ -1,117 +1,86 @@
-# Bloxorz 3D — Progress Presentation
-**Ali Mursaliyev & Zainab Soomro**
-Computer Graphics — April 2026
+# Bloxorz 3D - Final Presentation Notes
 
----
+**Computer Graphics - Spring 2026**
 
-## Quick Tips Before Presenting
+## Short Opening
 
-- Talk about **graphics stuff**, not game rules. Keep the game intro under 30 seconds.
-- Don't just say "Three.js handles it." Explain what's actually happening.
-- Show the game first, then explain what's going on behind the scenes.
+"We built Bloxorz 3D as an interactive WebGL puzzle game. The core challenge is to combine discrete puzzle logic with continuous 3D animation: the block has exact grid states for gameplay, but it rolls, falls, splits, and merges smoothly on screen."
 
----
+## What To Show
 
-## The Game (Say This Fast)
+| Time | Demo | Point |
+| --- | --- | --- |
+| 0:00-0:30 | Home screen and Level 1 | Browser-based WebGL scene, animated camera, procedural sky, real-time frame updates |
+| 0:30-1:15 | Roll the block | Grid state plus continuous translation and quaternion rotation |
+| 1:15-2:00 | Fragile/switch/bridge level | Collision validation, dynamic grid changes, shadows/material feedback |
+| 2:00-2:45 | Level 6 split mode | Teleport switch, two cube actors, active-cube switching, merge back into block |
+| 2:45-3:30 | Hint and verified levels | BFS solver, bridge-state search, `npm run check:levels` validation |
+| 3:30-4:20 | Camera/editor | Perspective camera, third-person follow, raycast-based level editor |
+| 4:20-5:00 | Rendering details | PBR materials, directional/hemisphere/ambient lights, shadows, fog, postprocessing, optional path tracing |
 
-"We built Bloxorz — a puzzle game where you roll a block to reach a goal. It runs in the browser using Three.js and WebGL."
+## Graphics Concepts To Emphasize
 
-Done. Move on.
+### Graphics Pipeline
 
----
+The project follows the pipeline discussed in lectures:
 
-## What We Built
+1. JavaScript creates geometry and scene objects.
+2. Model transforms place blocks, cubes, and tiles in world coordinates.
+3. The camera view transform converts world space to camera space.
+4. Perspective projection maps the 3D scene toward screen coordinates.
+5. WebGL rasterizes triangles into fragments.
+6. Fragment shader programs produced by Three.js materials compute final pixel colors.
+7. The frame buffer is displayed in the browser canvas.
 
-### 1. Custom Shaders (Talk About This the Most)
+### Geometry And Transformations
 
-We wrote two small programs that run on the graphics card (GPU) instead of the CPU:
+- Levels are stored as 2D arrays and converted into a 3D tile mesh.
+- The block uses three logical orientations: `standing`, `lying_x`, and `lying_z`.
+- Rolling is animated with interpolation between exact grid states.
+- Quaternions are used for orientation interpolation, avoiding the instability of Euler-angle rotations.
+- Falling and win animations use continuous transforms even though the puzzle state remains grid-based.
 
-- **Vertex shader** — touches every corner point of our block. It moves each point through 3 steps: place it in the world (Model), see it from the camera (View), flatten it onto the screen (Projection). We also make the block "breathe" by slightly growing/shrinking the points over time.
+### Viewing And Projection
 
-- **Fragment shader** — colors every pixel of the block. It uses a simple rule: if a surface faces the light, it's bright. If it faces away, it's dark. This is calculated with a **dot product** between the surface direction and the light direction. We also added a subtle glow that pulses over time.
+- Gameplay uses a perspective camera that follows the active block or cube.
+- The menu uses a view offset so the 3D scene and interface compose cleanly.
+- The gameplay camera uses a fixed third-person follow view.
+- Resize handling updates the renderer, composer, and projection matrix.
 
-> **If asked about the full pipeline:** points go through Model -> View -> Projection -> Clipping -> Rasterization (turning shapes into pixels) -> Fragment shading (coloring pixels) -> Screen
+### Lighting, Shading, And Materials
 
-### 2. Shadow Mapping
+- Tiles and blocks use physical materials with roughness, metalness, clearcoat, and emissive goal/switch details.
+- The scene uses ambient, hemisphere, and directional lights.
+- Directional shadows connect to the lecture discussion of visibility tests and shadow mapping.
+- Fog, bloom, vignette, SMAA, particles, and screen shake improve readability and feedback.
 
-How we make shadows:
-1. First, render the scene **from the light's perspective** — this creates a "depth photo" of what the light can see
-2. Then render normally from the camera. For each pixel, compare: is this point further from the light than what the depth photo shows? If yes → shadow
+### Ray/Path Tracing
 
-We also use **soft shadows** (PCF) — instead of checking one spot, it checks several nearby spots and averages them, which blurs the shadow edges so they look natural.
+- During idle settled scenes, the app attempts to use `three-gpu-pathtracer`.
+- The raster renderer remains the reliable real-time path during interaction.
+- The path tracer is guarded because its environment-map requirements are stricter than the PMREM texture used for raster reflections.
+- This is a good comparison with the ray/path tracing lecture: more physically based rendering is more expensive and has practical compatibility constraints.
 
-### 3. Rotation with Quaternions
+## Accurate Implementation Claims
 
-The block rolls using **quaternions** instead of regular rotation angles:
+- The project is shader-based through WebGL and Three.js materials/effects.
+- We use GPU vertex/fragment shaders generated by Three.js and helper libraries.
+- We did not hand-write a custom GLSL shader for the block material in the final code.
+- The Sparkles helper and postprocessing pipeline use shader programs internally.
 
-- Regular angles (Euler) can break at certain positions — this is called **gimbal lock**, where two rotation axes line up and you lose control of one direction
-- Quaternions don't have this problem
-- **SLERP** smoothly animates between the start and end rotation so the rolling looks natural
+## If Asked About The Code
 
-We also smoothly slide the position from A to B (**LERP**) and add a little arc using a sine wave so it looks like real rolling.
+- `src/main.js`: app state machine, scene transitions, render loop, callbacks.
+- `src/controls.js`: input, block rolling, cube movement, switches, fall/win animations.
+- `src/grid.js`: tile mesh creation, bridges, highlighting, layout state.
+- `src/solver.js`: BFS solver for shortest move hints.
+- `scripts/check-levels.js`: verifies official level par values.
+- `src/editor.js`: raycast-based level editor.
 
-### 4. PBR Materials (Tiles)
+## Strong Professor-Facing Points
 
-The tiles use **Physically Based Rendering** — a way to make surfaces look realistic:
-
-- **Roughness** = how smooth or matte the surface is
-- **Metalness** = how metallic it looks
-
-The green goal tile is shiny and metallic. The orange fragile tile is rough and matte. These two numbers are enough to create very different looks.
-
-### 5. Camera
-
-- **Perspective projection** — things closer to the camera look bigger, just like your eyes work
-- The camera sits behind and above the block, smoothly following it
-- When the block falls, the camera stays put so you can watch it drop
-
-### 6. Particles
-
-- 200 small dots floating upward in the background
-- Each particle is stored as a point in a big array that gets sent to the GPU
-- They're drawn as **points** (one vertex = one dot on screen) which is very efficient
-
-### 7. Atmosphere
-
-- **Fog** — far away tiles slowly fade into the background color, creating a sense of distance
-- **Vignette** — edges of the screen are darker, which pulls your eyes to the center
-- **Tone mapping** — a color adjustment step that makes everything look more like a movie instead of raw computer colors
-
----
-
-## Demo Plan
-
-| Step | What to Show | What to Say | Time |
-|------|-------------|-------------|------|
-| 1 | Open the game | "Here's our scene running in WebGL" | 10s |
-| 2 | Point at shadows | "Shadows use a two-pass technique — render from light, then compare" | 30s |
-| 3 | Point at the block | "This uses our custom shader — vertex shader moves the points, fragment shader calculates lighting per pixel" | 60s |
-| 4 | Point at tiles | "Tiles use PBR — roughness and metalness control how they look" | 20s |
-| 5 | Roll the block | "Rolling uses quaternions to avoid gimbal lock, animated with SLERP" | 30s |
-| 6 | Point at particles/fog | "Particles are rendered as GPU points, fog adds depth" | 15s |
-| 7 | Future plans | "We'll add more levels, switches, textures, and post-processing" | 20s |
-
----
-
-## What's Coming Next
-
-- More levels (3-4 total) loaded from JSON files
-- Switches that open/close bridges
-- Teleporter tiles that split the block into two pieces
-- Textures (images) on tile and block surfaces
-- Bloom effect (glow around bright things) and ambient occlusion (darkening in tight corners)
-- Level select screen
-- First-person camera (stretch goal)
-
----
-
-## If The Professor Asks...
-
-| Question | Simple Answer |
-|----------|-------------|
-| How does the graphics pipeline work? | Points → place in world → view from camera → flatten to screen → clip edges → turn into pixels → color each pixel → display |
-| Why quaternions? | Regular angles break at certain positions (gimbal lock). Quaternions don't. |
-| How do shadows work? | Render from the light first to get depth info, then use it to check what's in shadow |
-| What lighting model do you use? | If the surface faces the light → bright. Faces away → dark. Calculated with a dot product. |
-| What is PBR? | Two numbers — roughness and metalness — control how a surface reflects light, based on real physics |
-| What is tone mapping? | A color correction step that makes raw computer colors look more natural and cinematic |
+- We separated puzzle state from visual animation, which keeps gameplay exact and animation smooth.
+- We verified all official levels with an automated solver check.
+- We implemented a third-person gameplay camera and an orbiting menu camera.
+- We included an editor, persistence, procedural audio, particles, and responsive UI.
+- We can explain the project using course vocabulary: pipeline, frame buffer, transformations, projection, event callbacks, shading, shadows, and path tracing.

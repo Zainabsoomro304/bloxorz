@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Bloxorz 3D Presentation</title>
+  <style>
+    @font-face {
+      font-family: "ArialDeck";
+      src: url("file:///System/Library/Fonts/Supplemental/Arial.ttf") format("truetype");
+      font-weight: 400;
+    }
+    @font-face {
+      font-family: "ArialDeck";
+      src: url("file:///System/Library/Fonts/Supplemental/Arial%20Bold.ttf") format("truetype");
+      font-weight: 700;
+    }
+    @font-face {
+      font-family: "ArialMonoDeck";
+      src: url("file:///Users/alimursaliyev/Library/Fonts/arial-monospaced-mt-std.otf") format("opentype");
+      font-weight: 400;
+    }
+
+    @page {
+      size: 13.333in 7.5in;
+      margin: 0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: "ArialDeck", Arial, sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      counter-reset: slide;
+    }
+
+    .slide {
+      width: 13.333in;
+      height: 7.5in;
+      page-break-after: always;
+      break-after: page;
+      position: relative;
+      overflow: hidden;
+      padding: 0.72in 0.86in;
+      background: #000;
+      counter-increment: slide;
+    }
+
+    .slide:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
+
+    .slide::after {
+      content: counter(slide);
+      position: absolute;
+      right: 0.72in;
+      bottom: 0.48in;
+      color: #fff;
+      font: 10pt "ArialMonoDeck", Arial, monospace;
+    }
+
+    h1,
+    h2,
+    p,
+    pre {
+      margin: 0;
+      color: #fff;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: 66pt;
+      line-height: 0.92;
+      font-weight: 700;
+      max-width: 7in;
+    }
+
+    h2 {
+      font-size: 44pt;
+      line-height: 1;
+      font-weight: 700;
+      max-width: 9in;
+    }
+
+    p {
+      font-size: 25pt;
+      line-height: 1.25;
+      max-width: 10.2in;
+    }
+
+    pre {
+      font: 22pt/1.35 "ArialMonoDeck", Arial, monospace;
+      white-space: pre-wrap;
+      max-width: 10.7in;
+    }
+
+    .small {
+      font-size: 18pt;
+      line-height: 1.34;
+    }
+
+    .mono {
+      font-family: "ArialMonoDeck", Arial, monospace;
+    }
+
+    .label {
+      font: 15pt "ArialMonoDeck", Arial, monospace;
+      margin-bottom: 0.28in;
+      text-transform: uppercase;
+    }
+
+    .space {
+      height: 0.48in;
+    }
+
+    .space-small {
+      height: 0.24in;
+    }
+
+    .two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.7in;
+      align-items: start;
+    }
+
+    .tight pre {
+      font-size: 19pt;
+      line-height: 1.3;
+    }
+
+    .title {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      height: 100%;
+      padding-bottom: 0.25in;
+    }
+
+    .title p {
+      margin-top: 0.45in;
+      font-size: 24pt;
+      max-width: 7.6in;
+    }
+  </style>
+</head>
+<body>
+  <section class="slide">
+    <div class="title">
+      <p class="label">Computer Graphics Project</p>
+      <h1>Bloxorz 3D</h1>
+      <p>Three.js / WebGL puzzle game</p>
+    </div>
+  </section>
+
+  <section class="slide">
+    <p class="label">Scope</p>
+    <h2>What we built</h2>
+    <div class="space"></div>
+    <pre>8 verified levels
+rolling cuboid
+fragile tiles
+heavy and soft switches
+bridges
+teleport split mode
+level editor
+saved progress
+hint solver</pre>
+  </section>
+
+  <section class="slide">
+    <p class="label">Game state</p>
+    <h2>Discrete first</h2>
+    <div class="space"></div>
+    <pre>state = x, z, orientation
+
+orientation =
+  standing
+  lying_x
+  lying_z
+
+occupied cells decide:
+  legal move
+  fall
+  switch
+  goal</pre>
+  </section>
+
+  <section class="slide">
+    <p class="label">Movement</p>
+    <h2>Animation follows the rule</h2>
+    <div class="space"></div>
+    <pre>input changes grid state
+
+mesh position is interpolated
+mesh rotation uses quaternion motion
+
+after each move:
+  snap back to exact grid coordinate</pre>
+  </section>
+
+  <section class="slide">
+    <p class="label">Level mechanics</p>
+    <h2>Rules on the board</h2>
+    <div class="space"></div>
+    <pre>normal tile      supports the block
+fragile tile     breaks under standing block
+heavy switch     standing block only
+soft switch      any occupied cell
+bridge           toggled tile
+teleport         split into two cubes
+goal             standing block only</pre>
+  </section>
+
+  <section class="slide">
+    <p class="label">Graphics pipeline</p>
+    <h2>Course connection</h2>
+    <div class="space"></div>
+    <pre>geometry
+model transform
+view transform
+projection
+rasterization
+fragment shading
+frame buffer</pre>
+  </section>
+
+  <section class="slide">
+    <p class="label">Rendering</p>
+    <h2>Scene setup</h2>
+    <div class="space"></div>
+    <pre>PerspectiveCamera
+MeshPhysicalMaterial
+DirectionalLight
+AmbientLight
+shadows
+fog
+SMAA
+bloom
+vignette
+optional GPU path tracing</pre>
+  </section>
+
+  <section class="slide">
+    <p class="label">Interaction</p>
+    <h2>Player input</h2>
+    <div class="space"></div>
+    <pre>keyboard controls
+touch controls
+orbit camera
+move counter
+par display
+hints
+localStorage progress</pre>
+  </section>
+
+  <section class="slide tight">
+    <p class="label">Solver</p>
+    <h2>BFS over puzzle states</h2>
+    <div class="space"></div>
+    <div class="two">
+      <pre>state key:
+x, z
+orientation
+bridge mask
+split status</pre>
+      <pre>verified par:
+1  First Steps      8
+2  Over the Edge    7
+3  Fragile Ground   6
+4  Open Sesame      6
+5  Heavy Duty      12
+6  Split Decision   8
+7  Twin Bridges    13
+8  The Gauntlet    15</pre>
+    </div>
+  </section>
+
+  <section class="slide tight">
+    <p class="label">Code map</p>
+    <h2>Files to explain</h2>
+    <div class="space"></div>
+    <pre>src/main.js        game flow
+src/grid.js        board, tiles, bridges
+src/controls.js    movement and validation
+src/levels.js      levels, pars, themes
+src/solver.js      hint search
+src/editor.js      custom levels
+src/scene.js       renderer, camera, lights
+src/particles.js   visual feedback
+scripts/check-levels.js   level verification</pre>
+  </section>
+
+  <section class="slide">
+    <p class="label">Demo order</p>
+    <h2>Five minutes</h2>
+    <div class="space"></div>
+    <pre>1. level select and saved progress
+2. Level 1 movement and goal
+3. fragile tile
+4. switch and bridge
+5. teleport split and merge
+6. hint
+7. editor if time remains</pre>
+  </section>
+</body>
+</html>

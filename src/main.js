@@ -13,8 +13,8 @@ import { solveBFS } from './solver.js';
 import { createEditor } from './editor.js';
 import * as THREE from 'three';
 
-// drei-vanilla
-import { Sparkles } from '@pmndrs/vanilla';
+// drei-vanilla Sparkles helper
+import { Sparkles } from '@pmndrs/vanilla/core/Sparkles.js';
 
 // Path tracing
 import { WebGLPathTracer } from 'three-gpu-pathtracer';
@@ -50,8 +50,6 @@ const gameUiEl        = document.getElementById('game-ui');
 const splitHintEl     = document.getElementById('split-hint');
 const editorUiEl      = document.getElementById('editor-ui');
 const editBtnEl       = document.getElementById('edit-btn');
-const camToggleEl     = document.getElementById('cam-toggle');
-const camTextEl       = document.getElementById('cam-text');
 
 // ── Scene, Camera, Lighting ─────────────────────────────────────────────────
 
@@ -144,12 +142,29 @@ pathTracer.rasterizeSceneCallback = () => {
     composer.render();
 };
 
+pathTracer.pausePathTracing = true;
+
 let ptNeedsUpdate = true;
+let pathTracingEnabled = true;
 
 function rebuildPathTracerScene() {
     camera.updateMatrixWorld();
-    pathTracer.setScene(scene, camera);
-    ptNeedsUpdate = false;
+
+    // three-gpu-pathtracer expects an equirect/cube environment texture. The
+    // raster renderer uses a PMREM render-target texture, so hide it only while
+    // the path tracer builds its acceleration structures.
+    const rasterEnvironment = scene.environment;
+    scene.environment = null;
+
+    try {
+        pathTracer.setScene(scene, camera);
+    } catch (error) {
+        console.warn('Path tracing disabled; falling back to raster renderer.', error);
+        pathTracingEnabled = false;
+    } finally {
+        scene.environment = rasterEnvironment;
+        ptNeedsUpdate = false;
+    }
 }
 
 window.addEventListener('resize', () => {
@@ -167,12 +182,25 @@ const game = {
     currentLevel: 0,
     moveHistory: [],
     isCustomLevel: false,
+    customLevelData: null,
 
     // Split mode
     isSplit: false,
     cubes: null,        // [cubeApi0, cubeApi1]
     activeCubeIndex: 0,
 };
+
+const CUSTOM_LEVEL_INDEX = -1;
+
+function getCurrentLevelData() {
+    return game.isCustomLevel && game.customLevelData
+        ? game.customLevelData
+        : LEVELS[game.currentLevel];
+}
+
+function getCurrentTheme() {
+    return THEMES[game.currentLevel] || THEMES[0];
+}
 
 // ── Progress (localStorage) ─────────────────────────────────────────────────
 
@@ -234,6 +262,7 @@ function cleanupMenuScene() {
 function enterHomeState() {
     // Final state setup — called after transition or on first load
     menuState = 'home';
+    resetCameraView();
     homeScreenEl.classList.add('visible');
     levelSelectEl.classList.remove('visible');
     gameUiEl.style.display = 'none';
@@ -262,7 +291,6 @@ function showHomeScreen(fromGame = false) {
     homeScreenEl.classList.remove('visible');
     gameUiEl.style.display = 'none';
     statusOverlay.classList.remove('visible');
-    if (camToggleEl) camToggleEl.style.display = 'none';
 
     if (fromGame && menuState === 'game') {
         // Smooth camera swoosh from gameplay back to menu
@@ -271,7 +299,7 @@ function showHomeScreen(fromGame = false) {
         const startLookAt = game.blockApi
             ? game.blockApi.mesh.position.clone()
             : new THREE.Vector3(0, 0, 0);
-        const curTheme = THEMES[game.currentLevel] || THEMES[0];
+        const curTheme = getCurrentTheme();
         const menuTheme = THEMES[0];
 
         ensureMenuScene();
@@ -368,7 +396,6 @@ function showLevelSelect() {
     homeScreenEl.classList.remove('visible');
     gameUiEl.style.display = 'none';
     statusOverlay.classList.remove('visible');
-    if (camToggleEl) camToggleEl.style.display = 'none';
     populateLevelSelect();
     levelSelectEl.classList.add('visible');
 }
@@ -386,6 +413,8 @@ function startLevel(index) {
     if (menuState === 'transitioning') return;
     menuState = 'transitioning';
     game.isCustomLevel = false;
+    game.customLevelData = null;
+    resetCameraView();
     if (editBtnEl) editBtnEl.style.display = 'none';
     levelSelectEl.classList.remove('visible');
     homeScreenEl.classList.remove('visible');
@@ -439,7 +468,6 @@ function startLevel(index) {
 
         if (t >= 1) {
             gameUiEl.style.display = '';
-            if (camToggleEl) camToggleEl.style.display = 'flex';
             menuState = 'game';
             sounds.levelStart();
             ptNeedsUpdate = true;
@@ -456,15 +484,15 @@ function resetLevel() {
     if (game.blockApi) scene.remove(game.blockApi.mesh);
     cleanupSplit();
 
-    const levelData = LEVELS[game.currentLevel];
-    const theme = THEMES[game.currentLevel] || THEMES[0];
+    const levelData = getCurrentLevelData();
+    const theme = getCurrentTheme();
 
-    applyTheme(game.currentLevel);
+    applyTheme(game.isCustomLevel ? 0 : game.currentLevel);
     game.gridApi = createGrid(scene, levelData, true, { tiles: theme.tiles, goal: theme.goal });
     game.blockApi = createBlock(scene, levelData.startCol, levelData.startRow, theme.block);
     
-    // Reset camera heading and block translucency
-    cameraApi.resetHeading();
+    // Reset camera framing and block translucency
+    cameraApi.reset();
     updateBlockOpacity();
 
     game.moves = 0;
@@ -511,8 +539,6 @@ function impactSquash(object) {
     requestAnimationFrame(step);
 }
 
-const LEVEL_DROP = -16;
-
 function performLevelTransition() {
     game.isTransitioning = true;
     const oldIndex = game.currentLevel;
@@ -524,17 +550,14 @@ function performLevelTransition() {
     const block = game.blockApi.mesh;
     const oldGridApi = game.gridApi;
 
-    // Block is already in a clean state from the simplified win animation
-    // Just snap XZ to exact goal grid position
+    const LEVEL_DROP = -16;
     const goalCol = Math.round(block.position.x);
     const goalRow = Math.round(block.position.z);
     block.position.x = goalCol;
     block.position.z = goalRow;
 
-    // Old level tiles cascade-fall away
     oldGridApi.fallAway();
 
-    // Create next level below with the new theme's colors
     const newGridApi = createGrid(scene, nextLevel, false,
         { tiles: nextTheme.tiles, goal: nextTheme.goal });
     const xzOffset = {
@@ -543,14 +566,12 @@ function performLevelTransition() {
     };
     newGridApi.gridGroup.position.set(xzOffset.x, LEVEL_DROP, xzOffset.z);
 
-    // All new tiles start fully transparent
     const newTiles = Object.values(newGridApi.tiles);
     newTiles.forEach(tile => {
         tile.material.transparent = true;
         tile.material.opacity = 0;
     });
 
-    // Switch game refs to the new level
     game.gridApi = newGridApi;
     game.currentLevel = nextIndex;
     game.moves = 0;
@@ -562,13 +583,11 @@ function performLevelTransition() {
     moveNumberEl.textContent = '0';
     levelNameEl.textContent = `${nextLevel.id}. ${nextLevel.name}`;
 
-    // Block falls continuously from its current position to the new level
     const startY = block.position.y;
     const targetY = 1 + LEVEL_DROP;
     const fallStart = performance.now();
     const fallDuration = 950;
 
-    // Pre-compute block color targets for smooth lerp
     const blockColorStart = block.material.color.clone();
     const blockColorEnd = new THREE.Color(nextTheme.block);
     const fogColorStart = scene.fog.color.clone();
@@ -582,42 +601,29 @@ function performLevelTransition() {
 
         block.position.y = startY + (targetY - startY) * ease;
 
-        // ── Smooth theme transition ──
-        // Sky gradient interpolation
         const skyColors = oldTheme.sky.map((c, i) => lerpHex(c, nextTheme.sky[i], t));
         updateSky(skyColors);
-
-        // Fog color
         scene.fog.color.copy(fogColorStart).lerp(fogColorEnd, t);
-
-        // Block color
         block.material.color.copy(blockColorStart).lerp(blockColorEnd, t);
-
-        // Sparkle color
         _ca.copy(sparkleColorStart).lerp(sparkleColorEnd, t);
         sparkles.color = _ca.clone();
 
-        // New level tiles fade into view (20%→75% of fall)
         const fadeT = Math.max(0, Math.min((t - 0.2) / 0.55, 1));
         newTiles.forEach(tile => {
             tile.material.opacity = fadeT * fadeT;
         });
 
         if (t >= 1) {
-            // ── Landing ──
             block.position.y = targetY;
 
-            // Finalize theme
             applyTheme(nextIndex);
             block.material.color.set(nextTheme.block);
 
-            // Tiles fully opaque
             newTiles.forEach(tile => {
                 tile.material.transparent = false;
                 tile.material.opacity = 1;
             });
 
-            // Teleport everything back to origin
             const shiftX = -xzOffset.x;
             const shiftY = -LEVEL_DROP;
             const shiftZ = -xzOffset.z;
@@ -629,10 +635,8 @@ function performLevelTransition() {
             camera.position.y += shiftY;
             camera.position.z += shiftZ;
 
-            // Remove old level
             scene.remove(oldGridApi.gridGroup);
 
-            // Ready to play
             game.blockApi.state.orientation = 'standing';
             game.blockApi.state.isAnimating = false;
             game.isTransitioning = false;
@@ -644,7 +648,52 @@ function performLevelTransition() {
             requestAnimationFrame(fall);
         }
     }
+
     requestAnimationFrame(fall);
+}
+
+function getMovePreview(x, z, orientation, move) {
+    let nextX = x;
+    let nextZ = z;
+    let nextOrientation = orientation;
+
+    if (orientation === 'standing') {
+        nextX += move.dx * 1.5;
+        nextZ += move.dz * 1.5;
+        nextOrientation = move.dx !== 0 ? 'lying_x' : 'lying_z';
+    } else if (orientation === 'lying_x') {
+        if (move.dx !== 0) {
+            nextX += move.dx * 1.5;
+            nextOrientation = 'standing';
+        } else {
+            nextZ += move.dz;
+        }
+    } else {
+        if (move.dz !== 0) {
+            nextZ += move.dz * 1.5;
+            nextOrientation = 'standing';
+        } else {
+            nextX += move.dx;
+        }
+    }
+
+    return { x: nextX, z: nextZ, orientation: nextOrientation };
+}
+
+function getOccupiedCellsForState(x, z, orientation) {
+    if (orientation === 'standing') {
+        return [{ row: Math.round(z), col: Math.round(x) }];
+    }
+    if (orientation === 'lying_x') {
+        return [
+            { row: Math.round(z), col: Math.round(x - 0.5) },
+            { row: Math.round(z), col: Math.round(x + 0.5) },
+        ];
+    }
+    return [
+        { row: Math.round(z - 0.5), col: Math.round(x) },
+        { row: Math.round(z + 0.5), col: Math.round(x) },
+    ];
 }
 
 // ── Callbacks ───────────────────────────────────────────────────────────────
@@ -683,79 +732,41 @@ function onHint() {
     const blockApi = game.blockApi;
     if (!blockApi || blockApi.state.isAnimating || blockApi.state.isFalling) return;
 
-    const levelData = LEVELS[game.currentLevel];
+    const levelData = getCurrentLevelData();
     const gridApi = game.gridApi;
 
     // Get current block position and orientation to determine start for solver
     const pos = blockApi.mesh.position;
     const orient = blockApi.state.orientation;
 
-    // For the solver, we need the current layout state (bridges may have changed)
-    const solution = solveBFS(
-        gridApi.levelLayout,
-        levelData.startRow,
-        levelData.startCol,
-        levelData.switches || {},
-        levelData.bridges || {}
-    );
-
-    if (!solution || solution.length === 0) return;
-
-    // Highlight the tile the first move leads to
-    // Solver returns moves from the START position, so we need to solve from current state
-    // Re-solve from current position by computing occupied cells
-    let curCol, curRow;
-    if (orient === 'standing') {
-        curRow = Math.round(pos.z);
-        curCol = Math.round(pos.x);
-    } else if (orient === 'lying_x') {
-        curRow = Math.round(pos.z);
-        curCol = Math.round(pos.x - 0.5);
-    } else {
-        curRow = Math.round(pos.z - 0.5);
-        curCol = Math.round(pos.x);
-    }
-
     const fromCurrent = solveBFS(
         gridApi.levelLayout,
-        curRow,
-        curCol,
+        Math.round(pos.z),
+        Math.round(pos.x),
         levelData.switches || {},
-        gridApi.bridgeStates || {}
+        gridApi.bridgeStates || {},
+        {
+            startX: pos.x,
+            startZ: pos.z,
+            startOrientation: orient,
+        }
     );
 
     if (!fromCurrent || fromCurrent.length === 0) return;
 
     const nextMove = fromCurrent[0];
-    // Compute where the block center will be after this move
-    let nx = pos.x, nz = pos.z;
-    if (orient === 'standing') {
-        nx += nextMove.dx * 1.5;
-        nz += nextMove.dz * 1.5;
-    } else if (orient === 'lying_x') {
-        if (nextMove.dx !== 0) {
-            nx += nextMove.dx * 1.5;
-        } else {
-            nz += nextMove.dz * 1.0;
-        }
-    } else {
-        if (nextMove.dz !== 0) {
-            nz += nextMove.dz * 1.5;
-        } else {
-            nx += nextMove.dx * 1.0;
-        }
-    }
+    const preview = getMovePreview(pos.x, pos.z, orient, nextMove);
 
-    // Highlight the target cell(s)
-    gridApi.highlightTile(Math.round(nz), Math.round(nx));
+    // Highlight the target cell(s).
+    gridApi.highlightTiles(getOccupiedCellsForState(preview.x, preview.z, preview.orientation));
 }
 
 function onWin() {
     game.isWon = true;
-    const levelData = LEVELS[game.currentLevel];
-    saveProgress(levelData.id);
+    const levelData = getCurrentLevelData();
+    if (!game.isCustomLevel) saveProgress(levelData.id);
 
-    const hasNext = game.currentLevel < LEVELS.length - 1;
+    const hasNext = !game.isCustomLevel && game.currentLevel < LEVELS.length - 1;
 
     if (hasNext) {
         // Block stays visible — seamless fall-through to next level
@@ -773,7 +784,7 @@ function onWin() {
 
 function onReset() {
     if (game.isTransitioning || menuState === 'transitioning') return;
-    if (game.isWon && game.currentLevel < LEVELS.length - 1) {
+    if (game.isWon && !game.isCustomLevel && game.currentLevel < LEVELS.length - 1) {
         startLevel(game.currentLevel + 1);
     } else {
         resetLevel();
@@ -781,6 +792,7 @@ function onReset() {
 }
 
 function onEscape() {
+    resetCameraView();
     if (menuState === 'home') return;
     if (menuState === 'editor') {
         exitEditor();
@@ -801,6 +813,11 @@ function onEscape() {
 
 function onSplit(teleportTo) {
     const [[r0, c0], [r1, c1]] = teleportTo;
+
+    if (game.blockApi) {
+        scene.remove(game.blockApi.mesh);
+        game.blockApi = null;
+    }
 
     // Create two cubes
     const cube0 = createCube(scene, c0, r0, 0xf97316); // orange
@@ -830,8 +847,8 @@ function onMerge(r0, c0, r1, c1) {
     }
 
     // Re-create the block at the merged position
-    const levelData = LEVELS[game.currentLevel];
-    game.blockApi = createBlock(scene, cx, cz);
+    const theme = getCurrentTheme();
+    game.blockApi = createBlock(scene, cx, cz, theme.block);
     game.blockApi.state.orientation = orientation;
     game.blockApi.mesh.position.set(cx, getBlockYForOrientation(orientation), cz);
     game.blockApi.mesh.quaternion.copy(getOrientationQuaternion(orientation));
@@ -841,7 +858,7 @@ function onMerge(r0, c0, r1, c1) {
 }
 
 function onCubeSwitch() {
-    cameraApi.resetHeading();
+    cameraApi.reset();
     updateBlockOpacity();
 }
 
@@ -849,6 +866,7 @@ function onCubeSwitch() {
 
 function enterEditor() {
     if (menuState === 'transitioning') return;
+    resetCameraView();
     cleanupGame();
     cleanupMenuScene();
     menuState = 'editor';
@@ -856,7 +874,6 @@ function enterEditor() {
     levelSelectEl.classList.remove('visible');
     gameUiEl.style.display = 'none';
     statusOverlay.classList.remove('visible');
-    if (camToggleEl) camToggleEl.style.display = 'none';
     editorUiEl?.classList.add('visible');
     editor.enter();
     ptNeedsUpdate = true;
@@ -887,24 +904,24 @@ function playCustomLevel() {
     editor.exit();
     editorUiEl?.classList.remove('visible');
 
-    const customIndex = LEVELS.length;
-    LEVELS.push(levelData);
     camera.clearViewOffset();
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
 
-    game.currentLevel = customIndex;
+    resetCameraView();
+    game.currentLevel = CUSTOM_LEVEL_INDEX;
     game.isCustomLevel = true;
+    game.customLevelData = levelData;
     applyTheme(0);
     resetLevel();
     gameUiEl.style.display = '';
     if (editBtnEl) editBtnEl.style.display = '';
-    if (camToggleEl) camToggleEl.style.display = 'flex';
     menuState = 'game';
     ptNeedsUpdate = true;
 }
 
 function backToEditor() {
+    resetCameraView();
     cleanupGame();
     game.isCustomLevel = false;
     if (editBtnEl) editBtnEl.style.display = 'none';
@@ -945,71 +962,26 @@ document.querySelectorAll('[data-tool]').forEach(btn => {
     });
 });
 
-// ── Camera perspective functions ─────────────────────────────────────────────
+// ── Camera framing ─────────────────────────────────────────────────────────
+
+function resetCameraView() {
+    updateBlockOpacity();
+}
 
 function updateBlockOpacity() {
-    const isFpp = cameraApi.mode === 'fpp' && menuState === 'game';
     if (game.blockApi && game.blockApi.mesh) {
-        game.blockApi.mesh.material.transparent = true;
-        game.blockApi.mesh.material.opacity = isFpp ? 0.25 : 1.0;
+        game.blockApi.mesh.material.transparent = false;
+        game.blockApi.mesh.material.opacity = 1.0;
         game.blockApi.mesh.material.needsUpdate = true;
     }
     if (game.cubes) {
-        game.cubes.forEach((c, idx) => {
-            c.material.transparent = true;
-            c.material.opacity = (isFpp && idx === game.activeCubeIndex) ? 0.25 : 1.0;
+        game.cubes.forEach((c) => {
+            c.material.transparent = false;
+            c.material.opacity = 1.0;
             c.material.needsUpdate = true;
         });
     }
 }
-
-function toggleCameraMode() {
-    if (menuState !== 'game') return;
-    const newMode = cameraApi.mode === 'tpp' ? 'fpp' : 'tpp';
-    cameraApi.mode = newMode;
-    if (camTextEl) {
-        camTextEl.textContent = newMode === 'tpp' ? '3rd Person' : '1st Person';
-    }
-    updateBlockOpacity();
-
-    const canvas = container.querySelector('canvas');
-    if (canvas) {
-        if (newMode === 'fpp') {
-            canvas.requestPointerLock = canvas.requestPointerLock || canvas.mozRequestPointerLock || canvas.webkitRequestPointerLock;
-            canvas.requestPointerLock();
-        } else {
-            if (document.pointerLockElement === canvas) {
-                document.exitPointerLock();
-            }
-        }
-    }
-}
-
-if (camToggleEl) {
-    camToggleEl.addEventListener('click', toggleCameraMode);
-}
-
-// ── Pointer Lock Events ─────────────────────────────────────────────────────
-
-function handlePointerLockChange() {
-    const canvas = container.querySelector('canvas');
-    const isLocked = document.pointerLockElement === canvas;
-    if (!isLocked && cameraApi.mode === 'fpp') {
-        toggleCameraMode();
-    }
-}
-
-function handleMouseMove(e) {
-    const canvas = container.querySelector('canvas');
-    if (document.pointerLockElement === canvas) {
-        cameraApi.handleMouseMove(e);
-    }
-}
-
-document.addEventListener('pointerlockchange', handlePointerLockChange);
-document.addEventListener('mozpointerlockchange', handlePointerLockChange);
-document.addEventListener('webkitpointerlockchange', handlePointerLockChange);
-document.addEventListener('mousemove', handleMouseMove);
 
 // ── Controls ────────────────────────────────────────────────────────────────
 
@@ -1026,7 +998,6 @@ setupControls(game, {
     onFragileBreak,
     onWinEffect,
     onHint,
-    onCameraToggle: toggleCameraMode,
 }, cameraApi);
 
 // ── Start ───────────────────────────────────────────────────────────────────
@@ -1035,12 +1006,15 @@ showHomeScreen();
 
 // ── Animation loop ──────────────────────────────────────────────────────────
 
-const clock = new THREE.Clock();
+const startTime = performance.now();
+let previousFrameTime = startTime;
 
 function animate() {
     requestAnimationFrame(animate);
-    const time = clock.getElapsedTime();
-    const delta = clock.getDelta();
+    const now = performance.now();
+    const time = (now - startTime) / 1000;
+    const delta = (now - previousFrameTime) / 1000;
+    previousFrameTime = now;
 
     // Menu scene — 3D blocks on left side, orbit camera
     if (menuBlock && (menuState === 'home' || menuState === 'levelSelect')) {
@@ -1111,6 +1085,11 @@ function animate() {
     }
 
     // ── Path tracing management ──
+    if (!pathTracingEnabled) {
+        composer.render();
+        return;
+    }
+
     const isAnimating = game.isTransitioning
         || game.blockApi?.state.isAnimating
         || game.blockApi?.state.isFalling
@@ -1118,20 +1097,7 @@ function animate() {
         || shake.isShaking
         || particles.isActive;
 
-    if (isAnimating || !cameraApi.isStable) {
-        // Scene or camera in motion — pause path tracing, show rasterized
-        pathTracer.pausePathTracing = true;
-        pathTracer.reset();
-        ptNeedsUpdate = true;
-    } else {
-        // Everything settled — rebuild BVH if needed, resume path tracing
-        if (ptNeedsUpdate) {
-            rebuildPathTracerScene();
-        }
-        pathTracer.pausePathTracing = false;
-    }
-
-    pathTracer.renderSample();
+    composer.render();
 }
 
 animate();

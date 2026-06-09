@@ -5,7 +5,7 @@ export const LEVELS = [
     {
         id: 1,
         name: 'First Steps',
-        par: 7,
+        par: 8,
         startRow: 0,
         startCol: 0,
         layout: [
@@ -78,7 +78,7 @@ export const LEVELS = [
     {
         id: 5,
         name: 'Heavy Duty',
-        par: 13,
+        par: 12,
         startRow: 0,
         startCol: 0,
         layout: [
@@ -101,7 +101,7 @@ export const LEVELS = [
     {
         id: 6,
         name: 'Split Decision',
-        par: 9,
+        par: 8,
         startRow: 0,
         startCol: 0,
         layout: [
@@ -125,7 +125,7 @@ export const LEVELS = [
     {
         id: 7,
         name: 'Twin Bridges',
-        par: 15,
+        par: 13,
         startRow: 0,
         startCol: 2,
         layout: [
@@ -152,7 +152,7 @@ export const LEVELS = [
     {
         id: 8,
         name: 'The Gauntlet',
-        par: 18,
+        par: 15,
         startRow: 0,
         startCol: 1,
         layout: [

@@ -9,30 +9,6 @@ export function setupControls(game, callbacks, cameraApi) {
         if (game.isWon) return;
         if (dx === 0 && dz === 0) return;
 
-        // Translate movement relative to the decoupled horizontal FPP camera yaw if active
-        if (cameraApi && cameraApi.mode === 'fpp') {
-            const hDir = cameraApi.closestHeading; // returns { dx, dz } cardinally snapped
-            const hX = hDir.dx;
-            const hZ = hDir.dz;
-
-            const origDx = dx;
-            const origDz = dz;
-
-            if (origDz === -1) { // Forward
-                dx = hX;
-                dz = hZ;
-            } else if (origDz === 1) { // Backward
-                dx = -hX;
-                dz = -hZ;
-            } else if (origDx === -1) { // Leftward
-                dx = hZ;
-                dz = -hX;
-            } else if (origDx === 1) { // Rightward
-                dx = -hZ;
-                dz = hX;
-            }
-        }
-
         if (game.isSplit) {
             const cubeApi = game.cubes[game.activeCubeIndex];
             if (cubeApi._isAnimating) return;
@@ -51,7 +27,6 @@ export function setupControls(game, callbacks, cameraApi) {
         if (e.key === 'Escape') { callbacks.onEscape(); return; }
         if (e.key.toLowerCase() === 'z') { performUndo(game, callbacks); return; }
         if (e.key.toLowerCase() === 'h') { callbacks.onHint?.(); return; }
-        if (e.key.toLowerCase() === 'c') { callbacks.onCameraToggle?.(); return; }
 
         if (e.key === ' ' && game.isSplit) {
             e.preventDefault();
@@ -305,10 +280,11 @@ function validatePosition(game, blockApi, callbacks) {
             blockApi.state.isAnimating = true;
             // Block sinks slightly during tile break, then falls
             const block = blockApi.mesh;
+            const startY = block.position.y;
             const sinkStart = performance.now();
             function sink() {
                 const p = Math.min((performance.now() - sinkStart) / 200, 1);
-                block.position.y -= p * 0.015;
+                block.position.y = startY - p * 0.15;
                 if (p < 1) { requestAnimationFrame(sink); return; }
                 if (game.blockApi !== blockApi) return;
                 sounds.fall();
@@ -346,14 +322,14 @@ function validatePosition(game, blockApi, callbacks) {
 
 function activateSwitch(game, sw, callbacks) {
     if (sw._activated && sw.effect === 'permanent') return;
-    sw._activated = true;
+    if (sw.effect === 'permanent') sw._activated = true;
 
     sounds.switchActivate();
 
     if (sw.targets) {
-        game.gridApi.toggleBridges(sw.targets);
-        // Determine if bridges appeared or disappeared for sound
-        setTimeout(() => sounds.bridgeAppear(), 100);
+        const changes = game.gridApi.toggleBridges(sw.targets);
+        if (changes?.appeared) setTimeout(() => sounds.bridgeAppear(), 100);
+        if (changes?.disappeared) setTimeout(() => sounds.bridgeDisappear(), 100);
     }
 }
 
@@ -367,6 +343,7 @@ function activateTeleport(game, sw, callbacks) {
 
     // Animate block shrinking before split
     const block = blockApi.mesh;
+    const startY = block.position.y;
     const startTime = performance.now();
     const duration = 400;
 
@@ -374,7 +351,7 @@ function activateTeleport(game, sw, callbacks) {
         const p = Math.min((performance.now() - startTime) / duration, 1.0);
         const s = 1 - p * 0.8;
         block.scale.set(s, s, s);
-        block.position.y += 0.003;
+        block.position.y = startY + p * 0.12;
 
         if (p >= 1.0) {
             block.visible = false;

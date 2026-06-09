@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Bloxorz 3D Prep Notes</title>
+  <style>
+    @font-face {
+      font-family: "ArialDeck";
+      src: url("file:///System/Library/Fonts/Supplemental/Arial.ttf") format("truetype");
+      font-weight: 400;
+    }
+    @font-face {
+      font-family: "ArialDeck";
+      src: url("file:///System/Library/Fonts/Supplemental/Arial%20Bold.ttf") format("truetype");
+      font-weight: 700;
+    }
+    @font-face {
+      font-family: "ArialMonoDeck";
+      src: url("file:///Users/alimursaliyev/Library/Fonts/arial-monospaced-mt-std.otf") format("opentype");
+      font-weight: 400;
+    }
+
+    @page {
+      size: 13.333in 7.5in;
+      margin: 0;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      background: #000;
+      color: #fff;
+      font-family: "ArialDeck", Arial, sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+
+    body {
+      counter-reset: slide;
+    }
+
+    .slide {
+      width: 13.333in;
+      height: 7.5in;
+      page-break-after: always;
+      break-after: page;
+      position: relative;
+      overflow: hidden;
+      padding: 0.68in 0.82in;
+      background: #000;
+      counter-increment: slide;
+    }
+
+    .slide:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
+
+    .slide::after {
+      content: counter(slide);
+      position: absolute;
+      right: 0.72in;
+      bottom: 0.48in;
+      color: #fff;
+      font: 10pt "ArialMonoDeck", Arial, monospace;
+    }
+
+    h1,
+    h2,
+    p,
+    pre {
+      margin: 0;
+      color: #fff;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      font-size: 38pt;
+      line-height: 1.02;
+      font-weight: 700;
+      max-width: 9.8in;
+    }
+
+    h2 {
+      font: 15pt "ArialMonoDeck", Arial, monospace;
+      text-transform: uppercase;
+      margin-bottom: 0.24in;
+    }
+
+    p {
+      font-size: 20pt;
+      line-height: 1.3;
+      max-width: 10.5in;
+    }
+
+    pre {
+      font: 20pt/1.33 "ArialMonoDeck", Arial, monospace;
+      white-space: pre-wrap;
+      max-width: 11.2in;
+    }
+
+    .space {
+      height: 0.36in;
+    }
+
+    .small pre {
+      font-size: 18pt;
+      line-height: 1.32;
+    }
+
+    .two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.6in;
+      align-items: start;
+    }
+
+    .two pre {
+      font-size: 17pt;
+      line-height: 1.3;
+    }
+  </style>
+</head>
+<body>
+  <section class="slide">
+    <h2>Slide 01 prep</h2>
+    <h1>Bloxorz 3D</h1>
+    <div class="space"></div>
+    <pre>- Start with the game identity, not the technology.
+- Say it is a Bloxorz-style 3D puzzle game.
+- Mention Three.js/WebGL as the rendering base.
+- Keep this short, then move to the actual feature list.
+
+Simple line:
+We built a playable 3D puzzle game where the player rolls a cuboid across a tile map until it stands on the goal.</pre>
+  </section>
+
+  <section class="slide">
+    <h2>Slide 02 prep</h2>
+    <h1>What we built</h1>
+    <div class="space"></div>
+    <pre>- The project is not just one level.
+- There are 8 official levels.
+- Each level is checked for a shortest solution.
+- The game also has a level editor and saved progress.
+- Mention the main mechanics quickly:
+  fragile tiles, switches, bridges, teleport split mode.
+
+Do not explain every mechanic yet. Slide 5 is for that.</pre>
+  </section>
+
+  <section class="slide">
+    <h2>Slide 03 prep</h2>
+    <h1>Discrete game state</h1>
+    <div class="space"></div>
+    <pre>- The puzzle is stored as data, not guessed from the mesh.
+- Main state: x, z, orientation.
+- Standing block occupies one cell.
+- Lying block occupies two cells.
+- Legal moves are checked from occupied cells.
+- The same occupied cells also decide falls, switches, and wins.
+
+Key point:
+The graphics are smooth, but the puzzle logic stays exact.</pre>
+  </section>
+
+  <section class="slide">
+    <h2>Slide 04 prep</h2>
+    <h1>Movement and animation</h1>
+    <div class="space"></div>
+    <pre>- A key press first asks: is this move legal?
+- If legal, the state changes to the next grid position.
+- The mesh then animates toward that state.
+- Position interpolation makes movement smooth.
+- Quaternion rotation gives clean 3D rolling.
+- Snapping after the move prevents floating-point drift.
+
+This connects gameplay logic with transformation in graphics.</pre>
+  </section>
+
+  <section class="slide small">
+    <h2>Slide 05 prep</h2>
+    <h1>Level mechanics</h1>
+    <div class="space"></div>
+    <pre>- Normal tile: basic support tile.
+- Fragile tile: unsafe when the block stands upright.
+- Heavy switch: only works with upright block pressure.
+- Soft switch: works when any occupied cell touches it.
+- Bridge: changes the board during the level.
+- Teleport: splits the block into two smaller cubes.
+- Merge: split cubes must rejoin from valid adjacent cells.
+- Goal: only accepts a standing full block.
+
+Best explanation:
+Each mechanic changes the move-validation graph.</pre>
+  </section>
+
+  <section class="slide">
+    <h2>Slide 06 prep</h2>
+    <h1>Graphics pipeline</h1>
+    <div class="space"></div>
+    <pre>- Geometry: block, tiles, bridge meshes, particles.
+- Model transform: object position, rotation, scale.
+- View transform: camera position and direction.
+- Projection: 3D scene mapped to perspective screen space.
+- Rasterization: triangles become screen fragments.
+- Fragment shading: lights and materials affect final color.
+- Frame buffer: final pixels are written to the canvas.
+
+Use this slide to show direct lecture connection.</pre>
+  </section>
+
+  <section class="slide small">
+    <h2>Slide 07 prep</h2>
+    <h1>Scene setup</h1>
+    <div class="space"></div>
+    <pre>- PerspectiveCamera gives depth and 3D viewing.
+- MeshPhysicalMaterial handles lighting-based surfaces.
+- DirectionalLight creates main shadows.
+- AmbientLight keeps dark areas readable.
+- Fog adds depth.
+- SMAA reduces jagged edges.
+- Bloom/vignette are postprocessing effects.
+- GPU path tracing is optional and has fallback behavior.
+
+Important:
+Do not claim custom block shaders. Three.js materials use WebGL shader programs internally.</pre>
+  </section>
+
+  <section class="slide">
+    <h2>Slide 08 prep</h2>
+    <h1>Player input</h1>
+    <div class="space"></div>
+    <pre>- Keyboard controls handle desktop play.
+- Touch controls support mobile play.
+- Orbit camera lets the player inspect the board.
+- The gameplay camera stays in third-person follow mode.
+- HUD shows moves, par, level, and hints.
+- localStorage saves progress and custom levels.
+
+Good phrase:
+The same game state drives desktop, mobile, and the third-person camera.</pre>
+  </section>
+
+  <section class="slide small">
+    <h2>Slide 09 prep</h2>
+    <h1>BFS solver</h1>
+    <div class="space"></div>
+    <div class="two">
+      <pre>- BFS means breadth-first search.
+- It explores moves level by level.
+- First found solution is shortest.
+- State includes position, orientation,
+  bridge state, and split state.
+- Hint uses the next move from BFS.
+- check-levels verifies official pars.</pre>
+      <pre>Verified shortest paths:
+1  First Steps      8
+2  Over the Edge    7
+3  Fragile Ground   6
+4  Open Sesame      6
+5  Heavy Duty      12
+6  Split Decision   8
+7  Twin Bridges    13
+8  The Gauntlet    15
+
+Command:
+npm run check:levels</pre>
+    </div>
+  </section>
+
+  <section class="slide small">
+    <h2>Slide 10 prep</h2>
+    <h1>Code files</h1>
+    <div class="space"></div>
+    <pre>- main.js: app flow, menu transitions, level lifecycle.
+- grid.js: tile objects, bridge toggling, visual highlights.
+- controls.js: move rules, falling, split-block behavior.
+- levels.js: level data, themes, pars.
+- solver.js: BFS hint search.
+- editor.js: custom level editing and saving.
+- scene.js: renderer, camera, lights, postprocessing.
+- particles.js: dust, shatter, sparkles, win feedback.
+- scripts/check-levels.js: automated solvability check.
+
+If code is requested, start from controls.js and grid.js.</pre>
+  </section>
+
+  <section class="slide">
+    <h2>Slide 11 prep</h2>
+    <h1>Demo plan</h1>
+    <div class="space"></div>
+    <pre>- Keep the live demo focused.
+- First show level selection and saved progress.
+- Play Level 1 to show normal movement.
+- Jump to mechanics instead of solving every level.
+- Show one fragile tile, one switch/bridge, and teleport split.
+- Use one hint to connect back to BFS.
+- Show editor only if time remains.
+
+Timing rule:
+Do not spend more than one minute on Level 1.</pre>
+  </section>
+</body>
+</html>

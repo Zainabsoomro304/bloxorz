@@ -93,12 +93,14 @@ function createTileMaterial(type, themeColors = null) {
 
     const mat = new THREE.MeshPhysicalMaterial(cfg);
 
-    // Subtle per-tile color variation — breaks uniform grid look
-    const hsl = {};
-    mat.color.getHSL(hsl);
-    hsl.l = Math.max(0.05, Math.min(0.95, hsl.l + (Math.random() - 0.5) * 0.03));
-    hsl.h += (Math.random() - 0.5) * 0.01;
-    mat.color.setHSL(hsl.h, hsl.s, hsl.l);
+    // Subtle per-tile color variation — keep goal tiles fixed for clarity
+    if (key !== 'goal') {
+        const hsl = {};
+        mat.color.getHSL(hsl);
+        hsl.l = Math.max(0.05, Math.min(0.95, hsl.l + (Math.random() - 0.5) * 0.03));
+        hsl.h += (Math.random() - 0.5) * 0.01;
+        mat.color.setHSL(hsl.h, hsl.s, hsl.l);
+    }
 
     return mat;
 }
@@ -309,14 +311,18 @@ export function createGrid(scene, levelData, animate = true, themeColors = null)
     }
 
     function toggleBridges(targetKeys) {
+        const changes = { appeared: false, disappeared: false };
         for (const key of targetKeys) {
             const [r, c] = key.split(',').map(Number);
             if (bridgeStates[key]) {
                 removeBridgeTile(r, c);
+                changes.disappeared = true;
             } else {
                 addBridgeTile(r, c);
+                changes.appeared = true;
             }
         }
+        return changes;
     }
 
     function getSwitchData(row, col) {
@@ -395,33 +401,43 @@ export function createGrid(scene, levelData, animate = true, themeColors = null)
 
     // ── Hint highlight ──
 
-    let highlightedTile = null;
-    let highlightOrigColor = null;
+    let highlightedTileEntries = [];
 
     function highlightTile(row, col) {
+        highlightTiles([{ row, col }]);
+    }
+
+    function highlightTiles(cells) {
         clearHighlight();
-        const key = `${row},${col}`;
-        const tile = tiles[key];
-        if (!tile) return;
-        highlightedTile = tile;
-        highlightOrigColor = tile.material.emissive.clone();
-        tile.material.emissive.set(0x00ff88);
-        tile.material.emissiveIntensity = 0.6;
+        highlightedTileEntries = [];
+
+        for (const cell of cells) {
+            const key = `${cell.row},${cell.col}`;
+            const tile = tiles[key];
+            if (!tile) continue;
+
+            highlightedTileEntries.push({
+                tile,
+                emissive: tile.material.emissive.clone(),
+                emissiveIntensity: tile.material.emissiveIntensity || 0,
+            });
+            tile.material.emissive.set(0x00ff88);
+            tile.material.emissiveIntensity = 0.6;
+        }
     }
 
     function clearHighlight() {
-        if (highlightedTile && highlightOrigColor) {
-            highlightedTile.material.emissive.copy(highlightOrigColor);
-            highlightedTile.material.emissiveIntensity = 0;
-            highlightedTile = null;
-            highlightOrigColor = null;
+        for (const entry of highlightedTileEntries) {
+            entry.tile.material.emissive.copy(entry.emissive);
+            entry.tile.material.emissiveIntensity = entry.emissiveIntensity;
         }
+        highlightedTileEntries = [];
     }
 
     return {
         gridGroup, levelLayout, tiles, goalTile, bridgeStates,
         getTileType, removeTile, addBridgeTile, removeBridgeTile,
         toggleBridges, getSwitchData, restoreLayout, updateTime,
-        fallAway, startRow, startCol, highlightTile, clearHighlight,
+        fallAway, startRow, startCol, highlightTile, highlightTiles, clearHighlight,
     };
 }

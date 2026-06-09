@@ -16,9 +16,13 @@ const MOVES = [
  * @param {number} startCol    - starting column
  * @param {Object} switches    - switch definitions keyed by "row,col"
  * @param {Object} bridges     - initial bridge states keyed by "row,col" (true = present)
+ * @param {Object} [options]
+ * @param {number} [options.startX=startCol] - block center x; use this for non-standing starts
+ * @param {number} [options.startZ=startRow] - block center z; use this for non-standing starts
+ * @param {'standing'|'lying_x'|'lying_z'} [options.startOrientation='standing']
  * @returns {Array<{dx:number, dz:number}>|null} move sequence, or null if unsolvable
  */
-export function solveBFS(layout, startRow, startCol, switches, bridges) {
+export function solveBFS(layout, startRow, startCol, switches, bridges, options = {}) {
     // Bail out on teleport switches — not supported
     for (const key in switches) {
         if (switches[key].type === 'teleport') return null;
@@ -161,9 +165,9 @@ export function solveBFS(layout, startRow, startCol, switches, bridges) {
 
     // ── BFS ──────────────────────────────────────────────────────────────────
 
-    const startX = startCol;
-    const startZ = startRow;
-    const startOrient = 'standing';
+    const startX = options.startX ?? startCol;
+    const startZ = options.startZ ?? startRow;
+    const startOrient = options.startOrientation || 'standing';
 
     const startKey = stateKey(
         encodePos(startX), encodePos(startZ), startOrient, startBridgeMask
