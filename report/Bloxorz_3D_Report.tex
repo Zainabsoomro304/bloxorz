@@ -3,8 +3,6 @@
 \usepackage[margin=18mm]{geometry}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage{fontspec}
-\setmainfont{century_normal.ttf}[Path=/Users/alimursaliyev/Library/Fonts/, BoldFont=century_bold.ttf]
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{hyperref}
@@ -54,7 +52,7 @@
 \captionsetup{font=small,labelfont=bf}
 
 \lstset{
-  basicstyle=\small,
+  basicstyle=\ttfamily\small,
   backgroundcolor=\color{codebg},
   frame=single,
   rulecolor=\color{rule},
@@ -64,7 +62,7 @@
   showstringspaces=false
 }
 
-\newcommand{\code}[1]{{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
 
 \begin{document}
 
