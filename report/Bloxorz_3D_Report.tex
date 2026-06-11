@@ -3,23 +3,20 @@
 \usepackage[margin=18mm]{geometry}
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage{helvet}
+\usepackage{fontspec}
+\setmainfont{century_normal.ttf}[Path=/Users/alimursaliyev/Library/Fonts/, BoldFont=century_bold.ttf]
 \usepackage{graphicx}
 \usepackage{xcolor}
 \usepackage{hyperref}
-\usepackage{enumitem}
 \usepackage{fancyhdr}
 \usepackage{titlesec}
 \usepackage{caption}
 \usepackage{listings}
 \usepackage{microtype}
 
-\renewcommand{\familydefault}{\sfdefault}
 \graphicspath{{assets/}}
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{0.62em}
-\setlist[itemize]{leftmargin=1.35em,itemsep=0.18em,topsep=0.2em}
-\setlist[enumerate]{leftmargin=1.5em,itemsep=0.18em,topsep=0.2em}
 
 \definecolor{ink}{HTML}{111111}
 \definecolor{muted}{HTML}{555555}
@@ -57,7 +54,7 @@
 \captionsetup{font=small,labelfont=bf}
 
 \lstset{
-  basicstyle=\ttfamily\small,
+  basicstyle=\small,
   backgroundcolor=\color{codebg},
   frame=single,
   rulecolor=\color{rule},
@@ -67,7 +64,7 @@
   showstringspaces=false
 }
 
-\newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\code}[1]{{#1}}
 
 \begin{document}
 
@@ -93,35 +90,29 @@ The main design decision is simple: the game state is discrete, but the visual o
 \section{Motivation}
 
 The motivation was to build a project that clearly belongs to Computer Graphics while still being playable. A Bloxorz-style game is useful for this because every move can be explained with transformations:
-
-\begin{itemize}
-  \item The block translates and rotates in 3D.
-  \item The camera follows the active object using a view transform.
-  \item The perspective camera projects the 3D world to the screen.
-  \item Lighting, materials, shadows, fog, and postprocessing affect the final frame.
-  \item User input changes a state graph, then the scene animates toward that state.
-\end{itemize}
+The block translates and rotates in 3D.
+The camera follows the active object using a view transform.
+The perspective camera projects the 3D world to the screen.
+Lighting, materials, shadows, fog, and postprocessing affect the final frame.
+User input changes a state graph, then the scene animates toward that state.
 
 The game also gives a natural place to use algorithms. The hint system uses breadth-first search, and the same idea is used to verify the official par values. That makes the project stronger than a scene-only graphics demo, because the implementation is both graphical and rule-driven.
 
 \section{What Was Built}
 
 The final implementation includes:
-
-\begin{itemize}
-  \item Eight official levels with verified shortest par values.
-  \item A rolling cuboid with three logical orientations: \code{standing}, \code{lying\_x}, and \code{lying\_z}.
-  \item Normal tiles, fragile tiles, soft switches, heavy switches, bridges, teleport split mode, cube merge, and goal validation.
-  \item A custom level editor with raycast-based mouse placement.
-  \item Level progression, completion state, and best move counts saved with \code{localStorage}.
-  \item Keyboard controls, touch swipe controls, undo, restart, hints, and responsive UI.
-  \item A smooth third-person camera for gameplay and separate menu/editor camera flows.
-  \item WebGL rendering with physical materials, shadows, fog, procedural sky, environment lighting, SMAA, bloom, and vignette.
-  \item Procedural sound effects through the Web Audio API.
-  \item Dust, shatter, bridge, switch, sparkle, and win feedback.
-  \item A BFS hint solver for non-teleport official levels.
-  \item A verification script that checks the listed par values for all eight official levels, including the split-cube level.
-\end{itemize}
+Eight official levels with verified shortest par values.
+A rolling cuboid with three logical orientations: \code{standing}, \code{lying\_x}, and \code{lying\_z}.
+Normal tiles, fragile tiles, soft switches, heavy switches, bridges, teleport split mode, cube merge, and goal validation.
+A custom level editor with raycast-based mouse placement.
+Level progression, completion state, and best move counts saved with \code{localStorage}.
+Keyboard controls, touch swipe controls, undo, restart, hints, and responsive UI.
+A smooth third-person camera for gameplay and separate menu/editor camera flows.
+WebGL rendering with physical materials, shadows, fog, procedural sky, environment lighting, SMAA, bloom, and vignette.
+Procedural sound effects through the Web Audio API.
+Dust, shatter, bridge, switch, sparkle, and win feedback.
+A BFS hint solver for non-teleport official levels.
+A verification script that checks the listed par values for all eight official levels, including the split-cube level.
 
 \section{Implementation Snapshots}
 
@@ -164,19 +155,16 @@ The final implementation includes:
 \section{Project Structure}
 
 The code is split by responsibility:
-
-\begin{itemize}
-  \item \code{src/main.js}: application flow, level lifecycle, transitions, hints, and render loop.
-  \item \code{src/controls.js}: movement, validation, falling, win behavior, undo, switches, teleport split mode, cube movement, and cube merging.
-  \item \code{src/grid.js}: tile board, switch indicators, bridge tiles, bridge state, tile removal, and hint highlights.
-  \item \code{src/block.js}: main block and split cubes.
-  \item \code{src/levels.js}: official levels, starting cells, par values, switches, bridges, and visual themes.
-  \item \code{src/solver.js}: BFS hint solver for normal block levels.
-  \item \code{scripts/check-levels.js}: all-level par verification, including split mode.
-  \item \code{src/editor.js}: custom level editor with raycasting.
-  \item \code{src/scene.js}, \code{src/camera.js}, \code{src/lighting.js}, and \code{src/themes.js}: visual world setup.
-  \item \code{src/particles.js}, \code{src/sounds.js}, and \code{src/shake.js}: feedback systems.
-\end{itemize}
+\code{src/main.js}: application flow, level lifecycle, transitions, hints, and render loop.
+\code{src/controls.js}: movement, validation, falling, win behavior, undo, switches, teleport split mode, cube movement, and cube merging.
+\code{src/grid.js}: tile board, switch indicators, bridge tiles, bridge state, tile removal, and hint highlights.
+\code{src/block.js}: main block and split cubes.
+\code{src/levels.js}: official levels, starting cells, par values, switches, bridges, and visual themes.
+\code{src/solver.js}: BFS hint solver for normal block levels.
+\code{scripts/check-levels.js}: all-level par verification, including split mode.
+\code{src/editor.js}: custom level editor with raycasting.
+\code{src/scene.js}, \code{src/camera.js}, \code{src/lighting.js}, and \code{src/themes.js}: visual world setup.
+\code{src/particles.js}, \code{src/sounds.js}, and \code{src/shake.js}: feedback systems.
 
 \section{Game Flow}
 
@@ -195,31 +183,25 @@ Progress is saved in \code{localStorage} under one project key. The saved data s
 \section{Level Data and Board Representation}
 
 Each official level is stored as a 2D grid in \code{src/levels.js}. A number represents the tile type:
-
-\begin{itemize}
-  \item \code{0}: empty space
-  \item \code{1}: normal tile
-  \item \code{2}: goal tile
-  \item \code{3}: fragile tile
-  \item \code{4}: soft switch
-  \item \code{5}: heavy switch
-  \item \code{6}: teleport switch
-\end{itemize}
+\code{0}: empty space
+\code{1}: normal tile
+\code{2}: goal tile
+\code{3}: fragile tile
+\code{4}: soft switch
+\code{5}: heavy switch
+\code{6}: teleport switch
 
 Switches and bridges are stored separately from the basic layout. This is important because bridge tiles can appear and disappear while the level is running. The layout tells the game where the fixed tiles are; the bridge state tells the game which dynamic tiles currently exist.
 
 The official levels are:
-
-\begin{itemize}
-  \item Level 1, First Steps, par 8: normal movement.
-  \item Level 2, Over the Edge, par 7: narrow paths and falling risk.
-  \item Level 3, Fragile Ground, par 6: fragile tile behavior.
-  \item Level 4, Open Sesame, par 6: soft switch and bridge.
-  \item Level 5, Heavy Duty, par 12: heavy switch behavior.
-  \item Level 6, Split Decision, par 8: teleport split mode.
-  \item Level 7, Twin Bridges, par 13: combined soft and heavy bridge routes.
-  \item Level 8, The Gauntlet, par 15: combined mechanics.
-\end{itemize}
+Level 1, First Steps, par 8: normal movement.
+Level 2, Over the Edge, par 7: narrow paths and falling risk.
+Level 3, Fragile Ground, par 6: fragile tile behavior.
+Level 4, Open Sesame, par 6: soft switch and bridge.
+Level 5, Heavy Duty, par 12: heavy switch behavior.
+Level 6, Split Decision, par 8: teleport split mode.
+Level 7, Twin Bridges, par 13: combined soft and heavy bridge routes.
+Level 8, The Gauntlet, par 15: combined mechanics.
 
 \section{Puzzle State}
 
@@ -240,12 +222,9 @@ lying_z
 When the block is \code{standing}, it occupies one tile. When it is \code{lying\_x}, it occupies two neighboring tiles along the x axis. When it is \code{lying\_z}, it occupies two neighboring tiles along the z axis.
 
 Examples:
-
-\begin{itemize}
-  \item A standing block at \code{x = 2}, \code{z = 3} occupies only row 3, column 2.
-  \item A \code{lying\_x} block centered at \code{x = 2.5}, \code{z = 3} occupies row 3, columns 2 and 3.
-  \item A \code{lying\_z} block centered at \code{x = 2}, \code{z = 3.5} occupies rows 3 and 4, column 2.
-\end{itemize}
+A standing block at \code{x = 2}, \code{z = 3} occupies only row 3, column 2.
+A \code{lying\_x} block centered at \code{x = 2.5}, \code{z = 3} occupies row 3, columns 2 and 3.
+A \code{lying\_z} block centered at \code{x = 2}, \code{z = 3.5} occupies rows 3 and 4, column 2.
 
 The occupied cells decide whether the block falls, whether a switch activates, whether a fragile tile breaks, and whether the goal is reached.
 
@@ -254,12 +233,9 @@ The occupied cells decide whether the block falls, whether a switch activates, w
 Movement starts from a keyboard event, touch swipe, or split-cube move. The code first computes the next logical state. Then it animates the mesh toward that state.
 
 For the full block:
-
-\begin{itemize}
-  \item From \code{standing}, a move makes the block lie down. The center moves 1.5 cells because the block goes from one occupied cell to two occupied cells.
-  \item From \code{lying\_x}, moving left or right can stand the block up. Moving up or down slides the lying block sideways by one cell.
-  \item From \code{lying\_z}, moving up or down can stand the block up. Moving left or right slides the lying block sideways by one cell.
-\end{itemize}
+From \code{standing}, a move makes the block lie down. The center moves 1.5 cells because the block goes from one occupied cell to two occupied cells.
+From \code{lying\_x}, moving left or right can stand the block up. Moving up or down slides the lying block sideways by one cell.
+From \code{lying\_z}, moving up or down can stand the block up. Moving left or right slides the lying block sideways by one cell.
 
 The visual movement uses \code{Vector3.lerpVectors} for smooth position interpolation and \code{Quaternion.slerpQuaternions} for smooth rotation. After the animation, the mesh snaps to the exact target position and quaternion. This prevents floating-point drift after many moves.
 
@@ -319,13 +295,10 @@ The course ray/path tracing lecture is still relevant conceptually, but the fina
 \section{Lighting, Materials, and Visual Feedback}
 
 The scene uses several light types:
-
-\begin{itemize}
-  \item \code{AmbientLight} gives a base amount of light so shadowed areas are still readable.
-  \item \code{HemisphereLight} adds a soft sky/ground color contribution.
-  \item \code{DirectionalLight} acts like a sun and casts shadows.
-  \item A second directional fill light softens the opposite side.
-\end{itemize}
+\code{AmbientLight} gives a base amount of light so shadowed areas are still readable.
+\code{HemisphereLight} adds a soft sky/ground color contribution.
+\code{DirectionalLight} acts like a sun and casts shadows.
+A second directional fill light softens the opposite side.
 
 The main shadow-casting light follows the active block position. This keeps the shadow camera centered near the board and avoids wasting shadow resolution far away from gameplay.
 
@@ -405,31 +378,25 @@ The Playwright walkthrough opened the actual local app, cleared saved progress, 
 \section{What Was Implemented Directly and What Uses Libraries}
 
 Directly implemented in this project:
-
-\begin{itemize}
-  \item Level data and custom level format.
-  \item Block movement rules and orientation transitions.
-  \item Occupied-cell validation.
-  \item Fragile tile, soft switch, heavy switch, bridge, teleport split, merge, fall, and win logic.
-  \item Undo and move history.
-  \item BFS hint solver for normal/switch levels.
-  \item Split-mode BFS verification in \code{scripts/check-levels.js}.
-  \item Level editor state, custom level generation, and editor UI flow.
-  \item Procedural audio patterns using Web Audio API nodes.
-  \item Procedural sky drawing on a canvas.
-  \item Game UI flow, saved progress format, and responsive layout.
-\end{itemize}
+Level data and custom level format.
+Block movement rules and orientation transitions.
+Occupied-cell validation.
+Fragile tile, soft switch, heavy switch, bridge, teleport split, merge, fall, and win logic.
+Undo and move history.
+BFS hint solver for normal/switch levels.
+Split-mode BFS verification in \code{scripts/check-levels.js}.
+Level editor state, custom level generation, and editor UI flow.
+Procedural audio patterns using Web Audio API nodes.
+Procedural sky drawing on a canvas.
+Game UI flow, saved progress format, and responsive layout.
 
 External libraries and APIs used:
-
-\begin{itemize}
-  \item Three.js: WebGL renderer, scene graph, camera, vectors, quaternions, geometries, materials, lights, shadows, fog, raycaster, texture helpers, and rounded box geometry addon.
-  \item postprocessing: \code{EffectComposer}, render/effect passes, SMAA, Bloom, and Vignette.
-  \item \code{@pmndrs/vanilla}: Sparkles helper for floating sparkle particles.
-  \item Vite: development server and production build tooling.
-  \item Browser Web Audio API: oscillator, gain, buffer, and filter nodes for procedural sound.
-  \item Browser \code{localStorage}: saved progress and best move counts.
-\end{itemize}
+Three.js: WebGL renderer, scene graph, camera, vectors, quaternions, geometries, materials, lights, shadows, fog, raycaster, texture helpers, and rounded box geometry addon.
+postprocessing: \code{EffectComposer}, render/effect passes, SMAA, Bloom, and Vignette.
+\code{@pmndrs/vanilla}: Sparkles helper for floating sparkle particles.
+Vite: development server and production build tooling.
+Browser Web Audio API: oscillator, gain, buffer, and filter nodes for procedural sound.
+Browser \code{localStorage}: saved progress and best move counts.
 
 No outside Bloxorz source code was copied. The Bloxorz game idea is credited as inspiration, and the implementation here is written around this project's own level data, movement code, rendering setup, editor, and solver.
 
@@ -454,18 +421,15 @@ From a Computer Graphics point of view, the project demonstrates geometry creati
 The result is a complete playable project that can be demonstrated live and also explained from the implementation side.
 
 \section{References}
-
-\begin{itemize}
-  \item Course lecture notes in \code{LECTURE\_Notes}: graphics pipeline, OpenGL overview, transformations, viewing/projection, shading, shadows, and ray/path tracing.
-  \item Three.js documentation: \url{https://threejs.org/docs/}
-  \item Three.js Raycaster documentation: \url{https://threejs.org/docs/#api/en/core/Raycaster}
-  \item Three.js MeshPhysicalMaterial documentation: \url{https://threejs.org/docs/#api/en/materials/MeshPhysicalMaterial}
-  \item Vite guide: \url{https://vite.dev/guide/}
-  \item pmndrs postprocessing documentation: \url{https://pmndrs.github.io/postprocessing/public/docs/}
-  \item pmndrs/drei-vanilla repository: \url{https://github.com/pmndrs/drei-vanilla}
-  \item MDN Web Audio API: \url{https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API}
-  \item MDN localStorage documentation: \url{https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage}
-  \item Coolmath Games Bloxorz page: \url{https://www.coolmathgames.com/0-bloxorz}
-\end{itemize}
+Course lecture notes in \code{LECTURE\_Notes}: graphics pipeline, OpenGL overview, transformations, viewing/projection, shading, shadows, and ray/path tracing.
+Three.js documentation: \url{https://threejs.org/docs/}
+Three.js Raycaster documentation: \url{https://threejs.org/docs/#api/en/core/Raycaster}
+Three.js MeshPhysicalMaterial documentation: \url{https://threejs.org/docs/#api/en/materials/MeshPhysicalMaterial}
+Vite guide: \url{https://vite.dev/guide/}
+pmndrs postprocessing documentation: \url{https://pmndrs.github.io/postprocessing/public/docs/}
+pmndrs/drei-vanilla repository: \url{https://github.com/pmndrs/drei-vanilla}
+MDN Web Audio API: \url{https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API}
+MDN localStorage documentation: \url{https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage}
+Coolmath Games Bloxorz page: \url{https://www.coolmathgames.com/0-bloxorz}
 
 \end{document}

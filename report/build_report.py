@@ -158,19 +158,14 @@ def build_html():
   <title>Bloxorz 3D Report</title>
   <style>
     @font-face {{
-      font-family: "ArialReport";
-      src: url("file:///System/Library/Fonts/Supplemental/Arial.ttf") format("truetype");
+      font-family: "CenturyReport";
+      src: url("file:///Users/alimursaliyev/Library/Fonts/century_normal.ttf") format("truetype");
       font-weight: 400;
     }}
     @font-face {{
-      font-family: "ArialReport";
-      src: url("file:///System/Library/Fonts/Supplemental/Arial%20Bold.ttf") format("truetype");
+      font-family: "CenturyReport";
+      src: url("file:///Users/alimursaliyev/Library/Fonts/century_bold.ttf") format("truetype");
       font-weight: 700;
-    }}
-    @font-face {{
-      font-family: "ArialMonoReport";
-      src: url("file:///Users/alimursaliyev/Library/Fonts/arial-monospaced-mt-std.otf") format("opentype");
-      font-weight: 400;
     }}
     @page {{
       size: A4;
@@ -183,7 +178,7 @@ def build_html():
       margin: 0;
       background: #ffffff;
       color: #111111;
-      font-family: "ArialReport", Arial, sans-serif;
+      font-family: "CenturyReport", Century, serif;
       font-size: 11pt;
       line-height: 1.42;
       -webkit-print-color-adjust: exact;
@@ -232,7 +227,7 @@ def build_html():
       padding-left: 1mm;
     }}
     code {{
-      font-family: "ArialMonoReport", Arial, monospace;
+      font-family: "CenturyReport", Century, serif;
       font-size: 0.92em;
     }}
     a {{
@@ -257,7 +252,7 @@ def build_html():
       color: #444444;
     }}
     pre {{
-      font-family: "ArialMonoReport", Arial, monospace;
+      font-family: "CenturyReport", Century, serif;
       font-size: 9.2pt;
       line-height: 1.35;
       background: #f5f5f5;

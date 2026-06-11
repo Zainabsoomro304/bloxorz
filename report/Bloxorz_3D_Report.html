@@ -5,19 +5,14 @@
   <title>Bloxorz 3D Report</title>
   <style>
     @font-face {
-      font-family: "ArialReport";
-      src: url("file:///System/Library/Fonts/Supplemental/Arial.ttf") format("truetype");
+      font-family: "CenturyReport";
+      src: url("file:///Users/alimursaliyev/Library/Fonts/century_normal.ttf") format("truetype");
       font-weight: 400;
     }
     @font-face {
-      font-family: "ArialReport";
-      src: url("file:///System/Library/Fonts/Supplemental/Arial%20Bold.ttf") format("truetype");
+      font-family: "CenturyReport";
+      src: url("file:///Users/alimursaliyev/Library/Fonts/century_bold.ttf") format("truetype");
       font-weight: 700;
-    }
-    @font-face {
-      font-family: "ArialMonoReport";
-      src: url("file:///Users/alimursaliyev/Library/Fonts/arial-monospaced-mt-std.otf") format("opentype");
-      font-weight: 400;
     }
     @page {
       size: A4;
@@ -30,7 +25,7 @@
       margin: 0;
       background: #ffffff;
       color: #111111;
-      font-family: "ArialReport", Arial, sans-serif;
+      font-family: "CenturyReport", Century, serif;
       font-size: 11pt;
       line-height: 1.42;
       -webkit-print-color-adjust: exact;
@@ -79,7 +74,7 @@
       padding-left: 1mm;
     }
     code {
-      font-family: "ArialMonoReport", Arial, monospace;
+      font-family: "CenturyReport", Century, serif;
       font-size: 0.92em;
     }
     a {
@@ -104,7 +99,7 @@
       color: #444444;
     }
     pre {
-      font-family: "ArialMonoReport", Arial, monospace;
+      font-family: "CenturyReport", Century, serif;
       font-size: 9.2pt;
       line-height: 1.35;
       background: #f5f5f5;
@@ -128,38 +123,19 @@
 <section>
 <h2>Introduction</h2>
 <p>Bloxorz 3D is a browser-based 3D puzzle game inspired by the classic Bloxorz block-rolling mechanic. The player controls a rectangular block on a tile board and tries to reach the goal tile. The goal is accepted only when the full block is standing upright on it, so the puzzle is about both position and orientation.</p>
-<p>The project is implemented as a real-time WebGL application with Three.js. It is not only a puzzle logic demo: the final version includes a complete menu flow, level selection, eight playable levels, saved progress, animated block movement, level mechanics, a custom editor, procedural audio, visual feedback, postprocessing, and an automated level verification script.</p>
-<p>The main design decision is simple: the game state is discrete, but the visual output is continuous. The board logic uses exact grid cells, while the rendered block uses smooth 3D transforms, lighting, shadows, particles, and camera movement.</p>
+<p>The project is implemented as a real-time WebGL application with Three.js. It includes a complete menu flow, level selection, eight playable levels, saved progress, animated block movement, level mechanics, a custom editor, procedural audio, visual feedback, postprocessing, and an automated level verification script.</p>
+<p>The main design decision is to keep the puzzle state discrete while making the rendered result continuous. The board logic uses exact grid cells. The visible block uses smooth 3D transforms, lighting, shadows, particles, and camera movement.</p>
 </section>
 <section>
 <h2>Motivation</h2>
-<p>The motivation was to build a project that clearly belongs to Computer Graphics while still being playable. A Bloxorz-style game is useful for this because every move can be explained with transformations:</p>
-<ul>
-<li>The block translates and rotates in 3D.</li>
-<li>The camera follows the active object using a view transform.</li>
-<li>The perspective camera projects the 3D world to the screen.</li>
-<li>Lighting, materials, shadows, fog, and postprocessing affect the final frame.</li>
-<li>User input changes a state graph, then the scene animates toward that state.</li>
-</ul>
-<p>The game also gives a natural place to use algorithms. The hint system uses breadth-first search, and the same idea is used to verify the official par values. That makes the project stronger than a scene-only graphics demo, because the implementation is both graphical and rule-driven.</p>
+<p>The motivation was to build a project that clearly belongs to Computer Graphics while still being playable. A Bloxorz-style game is a good fit because every move can be explained with transformations. The block translates and rotates in 3D, the camera follows the active object through a view transform, the perspective camera projects the world onto the screen, and the final frame is shaped by lighting, materials, shadows, fog, and postprocessing.</p>
+<p>The game also gives a natural place to use graph search. The hint system uses breadth-first search, and the same idea is used to verify the official par values. This makes the project stronger than a scene-only graphics demo, because the implementation is both graphical and rule-driven.</p>
 </section>
 <section>
 <h2>What Was Built</h2>
-<p>The final implementation includes:</p>
-<ul>
-<li>Eight official levels with verified shortest par values.</li>
-<li>A rolling cuboid with three logical orientations: <code>standing</code>, <code>lying_x</code>, and <code>lying_z</code>.</li>
-<li>Normal tiles, fragile tiles, soft switches, heavy switches, bridges, teleport split mode, cube merge, and goal validation.</li>
-<li>A custom level editor with raycast-based mouse placement.</li>
-<li>Level progression, completion state, and best move counts saved with <code>localStorage</code>.</li>
-<li>Keyboard controls, touch swipe controls, undo, restart, hints, and responsive UI.</li>
-<li>A smooth third-person camera for gameplay and separate menu/editor camera flows.</li>
-<li>WebGL rendering with physical materials, shadows, fog, procedural sky, environment lighting, SMAA, bloom, and vignette.</li>
-<li>Procedural sound effects through the Web Audio API.</li>
-<li>Dust, shatter, bridge, switch, sparkle, and win feedback.</li>
-<li>A BFS hint solver for non-teleport official levels.</li>
-<li>A verification script that checks the listed par values for all eight official levels, including the split-cube level.</li>
-</ul>
+<p>The final implementation has eight official levels with verified shortest par values. It has a rolling cuboid with three logical orientations, normal tiles, fragile tiles, soft switches, heavy switches, bridges, teleport split mode, cube merge, and strict goal validation.</p>
+<p>The project also includes a custom level editor with raycast-based mouse placement. Progress, completion state, and best move counts are saved with <code>localStorage</code>. The player can use keyboard input, touch swipes, undo, restart, and hints. The game has a third-person gameplay camera, separate menu/editor camera flows, procedural sound effects, particles, and responsive UI.</p>
+<p>The visual side uses WebGL through Three.js. The scene uses physical materials, shadows, fog, a procedural sky, environment lighting, SMAA, bloom, and vignette. The implementation also includes a BFS hint solver for non-teleport official levels and a verification script that checks every listed par value, including the split-cube level.</p>
 </section>
 <section>
 <h2>Implementation Snapshots</h2>
@@ -190,105 +166,52 @@
 </section>
 <section>
 <h2>Project Structure</h2>
-<p>The code is split by responsibility:</p>
-<ul>
-<li><code>src/main.js</code> controls the application flow: home screen, level selection, gameplay, editor entry, level loading, transitions, hints, and the render loop.</li>
-<li><code>src/controls.js</code> implements movement, validation, falling, win behavior, undo, switches, teleport split mode, cube movement, and cube merging.</li>
-<li><code>src/grid.js</code> builds the tile board, switch indicators, bridge tiles, bridge state, tile removal, and hint highlights.</li>
-<li><code>src/block.js</code> creates the main block and split cubes.</li>
-<li><code>src/levels.js</code> stores official levels, starting cells, par values, switches, bridges, and visual theme data.</li>
-<li><code>src/solver.js</code> implements the BFS hint solver for normal block levels.</li>
-<li><code>scripts/check-levels.js</code> verifies all official par values and includes a separate split-mode search for the teleport level.</li>
-<li><code>src/editor.js</code> implements the custom level editor with raycasting.</li>
-<li><code>src/scene.js</code>, <code>src/camera.js</code>, <code>src/lighting.js</code>, and <code>src/themes.js</code> set up the visual world.</li>
-<li><code>src/particles.js</code>, <code>src/sounds.js</code>, and <code>src/shake.js</code> provide feedback.</li>
-</ul>
+<p>The main application flow lives in <code>src/main.js</code>. It controls the home screen, level selection, gameplay, editor entry, level loading, transitions, hints, and the render loop.</p>
+<p>The movement rules live in <code>src/controls.js</code>. This file handles rolling, validation, falling, winning, undo, switches, teleport split mode, cube movement, and cube merging. The board builder is <code>src/grid.js</code>, which creates tile meshes, switch indicators, bridge tiles, bridge state, tile removal, and hint highlights. The block and split cubes are created in <code>src/block.js</code>.</p>
+<p>The official level data is stored in <code>src/levels.js</code>. The BFS hint solver is in <code>src/solver.js</code>, and <code>scripts/check-levels.js</code> verifies the official par values. The custom editor is implemented in <code>src/editor.js</code>. Rendering setup is split across <code>src/scene.js</code>, <code>src/camera.js</code>, <code>src/lighting.js</code>, and <code>src/themes.js</code>. Feedback systems are placed in <code>src/particles.js</code>, <code>src/sounds.js</code>, and <code>src/shake.js</code>.</p>
 </section>
 <section>
 <h2>Game Flow</h2>
-<p>The application has four main user-facing states.</p>
-<p>Home is the starting state. It shows the title, a small 3D preview board, and buttons for Play and Editor.</p>
-<p>Level select shows all eight official levels. Locked levels are dimmed. Completed levels are marked. If the saved best move count is less than or equal to the level par, the level also gets a star.</p>
-<p>Gameplay shows the active board, the rolling block, move counter, level title, control hints, and temporary overlays for win/fall states.</p>
-<p>Editor shows a top-down editable grid with tools for normal tile, fragile tile, goal, start, soft switch, heavy switch, bridge, and eraser. A custom level can be tested immediately and then edited again.</p>
-<p>Progress is saved in <code>localStorage</code> under one project key. The saved data stores completed level IDs and best move counts.</p>
+<p>The application has four main states. The home screen shows the title, a small 3D preview board, and the Play and Editor buttons. The level select screen shows all eight official levels, dims locked levels, marks completed levels, and shows a star when the saved best move count is less than or equal to par.</p>
+<p>During gameplay, the screen shows the active board, the rolling block, the move counter, the level title, control hints, and temporary win or fall overlays. In editor mode, the camera moves to a top-down view and the player can place normal tiles, fragile tiles, goal, start, soft switches, heavy switches, bridges, and eraser actions.</p>
+<p>Progress is saved in <code>localStorage</code> under one project key. The saved data stores completed level IDs and best move counts, so progress remains after refresh.</p>
 </section>
 <section>
 <h2>Level Data and Board Representation</h2>
-<p>Each official level is stored as a 2D grid in <code>src/levels.js</code>. A number represents the tile type:</p>
-<ul>
-<li><code>0</code>: empty space</li>
-<li><code>1</code>: normal tile</li>
-<li><code>2</code>: goal tile</li>
-<li><code>3</code>: fragile tile</li>
-<li><code>4</code>: soft switch</li>
-<li><code>5</code>: heavy switch</li>
-<li><code>6</code>: teleport switch</li>
-</ul>
-<p>Switches and bridges are stored separately from the basic layout. This is important because bridge tiles can appear and disappear while the level is running. The layout tells the game where the fixed tiles are; the bridge state tells the game which dynamic tiles currently exist.</p>
-<p>The official levels are:</p>
-<ul>
-<li>Level 1, First Steps, par 8: normal movement.</li>
-<li>Level 2, Over the Edge, par 7: narrow paths and falling risk.</li>
-<li>Level 3, Fragile Ground, par 6: fragile tile behavior.</li>
-<li>Level 4, Open Sesame, par 6: soft switch and bridge.</li>
-<li>Level 5, Heavy Duty, par 12: heavy switch behavior.</li>
-<li>Level 6, Split Decision, par 8: teleport split mode.</li>
-<li>Level 7, Twin Bridges, par 13: combined soft and heavy bridge routes.</li>
-<li>Level 8, The Gauntlet, par 15: combined mechanics.</li>
-</ul>
+<p>Each official level is stored as a two-dimensional grid in <code>src/levels.js</code>. The number <code>0</code> means empty space, <code>1</code> means normal tile, <code>2</code> means goal tile, <code>3</code> means fragile tile, <code>4</code> means soft switch, <code>5</code> means heavy switch, and <code>6</code> means teleport switch.</p>
+<p>Switches and bridges are stored separately from the basic layout. This matters because bridge tiles can appear and disappear while the level is running. The layout tells the game where fixed tiles are. The bridge state tells the game which dynamic tiles currently exist.</p>
+<p>The official levels are First Steps with par 8, Over the Edge with par 7, Fragile Ground with par 6, Open Sesame with par 6, Heavy Duty with par 12, Split Decision with par 8, Twin Bridges with par 13, and The Gauntlet with par 15.</p>
 </section>
 <section>
 <h2>Puzzle State</h2>
 <p>The main block state is:</p>
 <pre><code>x, z, orientation</code></pre>
-<p>The orientation has three values:</p>
+<p>The orientation can be:</p>
 <pre><code>standing
 lying_x
 lying_z</code></pre>
 <p>When the block is <code>standing</code>, it occupies one tile. When it is <code>lying_x</code>, it occupies two neighboring tiles along the x axis. When it is <code>lying_z</code>, it occupies two neighboring tiles along the z axis.</p>
-<p>This state is used for all gameplay decisions. The mesh position is not guessed from physics. Instead, the code computes occupied cells from the exact state and checks those cells against the grid.</p>
-<p>Examples:</p>
-<ul>
-<li>A standing block at <code>x = 2</code>, <code>z = 3</code> occupies only row 3, column 2.</li>
-<li>A <code>lying_x</code> block centered at <code>x = 2.5</code>, <code>z = 3</code> occupies row 3, columns 2 and 3.</li>
-<li>A <code>lying_z</code> block centered at <code>x = 2</code>, <code>z = 3.5</code> occupies rows 3 and 4, column 2.</li>
-</ul>
+<p>A standing block at <code>x = 2</code>, <code>z = 3</code> occupies row 3, column 2. A <code>lying_x</code> block centered at <code>x = 2.5</code>, <code>z = 3</code> occupies row 3, columns 2 and 3. A <code>lying_z</code> block centered at <code>x = 2</code>, <code>z = 3.5</code> occupies rows 3 and 4, column 2.</p>
 <p>The occupied cells decide whether the block falls, whether a switch activates, whether a fragile tile breaks, and whether the goal is reached.</p>
 </section>
 <section>
 <h2>Movement Implementation</h2>
 <p>Movement starts from a keyboard event, touch swipe, or split-cube move. The code first computes the next logical state. Then it animates the mesh toward that state.</p>
-<p>For the full block:</p>
-<ul>
-<li>From <code>standing</code>, a move makes the block lie down. The center moves 1.5 cells because the block goes from one occupied cell to two occupied cells.</li>
-<li>From <code>lying_x</code>, moving left or right can stand the block up. Moving up or down slides the lying block sideways by one cell.</li>
-<li>From <code>lying_z</code>, moving up or down can stand the block up. Moving left or right slides the lying block sideways by one cell.</li>
-</ul>
-<p>The visual movement uses:</p>
-<ul>
-<li><code>Vector3.lerpVectors</code> for smooth position interpolation.</li>
-<li><code>Quaternion.slerpQuaternions</code> for smooth rotation.</li>
-<li>A short vertical arc during rolling so the block feels like it pivots instead of sliding.</li>
-<li>A final snap to the exact target position and quaternion to prevent floating-point drift.</li>
-</ul>
-<p>This is a direct use of transformation concepts from the course. The logical state changes in grid space, and the visible mesh changes with translation and rotation in world space.</p>
+<p>From <code>standing</code>, a move makes the block lie down and the center moves 1.5 cells. From <code>lying_x</code>, moving left or right can stand the block up, while moving up or down slides the lying block sideways by one cell. From <code>lying_z</code>, moving up or down can stand the block up, while moving left or right slides the lying block sideways by one cell.</p>
+<p>The visual motion uses <code>Vector3.lerpVectors</code> for position interpolation and <code>Quaternion.slerpQuaternions</code> for rotation. A short vertical arc makes the motion feel like a roll instead of a slide. After each move, the mesh snaps to the exact target position and quaternion so floating-point drift does not accumulate.</p>
+<p>This directly connects to transformation concepts from the course. The logical state changes in grid space, and the visible mesh changes with translation and rotation in world space.</p>
 </section>
 <section>
 <h2>Tile Mechanics</h2>
-<p>Normal tiles support the block in any legal orientation.</p>
-<p>Goal tiles finish the level only when the full block is standing upright on them. A lying block touching the goal is not enough.</p>
-<p>Fragile tiles break only when the full block stands upright on them. The tile is removed, shatter feedback plays, and the block falls.</p>
-<p>Soft switches activate when any occupied cell touches them. A standing block, lying block, or split cube can trigger a soft switch.</p>
-<p>Heavy switches activate only when the full block stands upright on them. This forces the player to plan orientation, not only position.</p>
-<p>Bridges are dynamic support tiles. Switches toggle their target bridge cells. The bridge state is saved in move history and included in solver states.</p>
-<p>Teleport switches split the full block into two smaller cubes. The player controls one cube at a time and changes the active cube with Space. If the two cubes become adjacent, they merge back into one lying block. The merge orientation depends on whether the two cubes are adjacent along x or along z.</p>
+<p>Normal tiles support the block in any legal orientation. Goal tiles finish the level only when the full block stands upright on them. A lying block touching the goal is not enough.</p>
+<p>Fragile tiles break only when the full block stands upright on them. The tile is removed, shatter feedback plays, and the block falls. Soft switches activate when any occupied cell touches them, so a standing block, lying block, or split cube can trigger them. Heavy switches activate only when the full block stands upright on them, which forces the player to plan orientation as well as position.</p>
+<p>Bridges are dynamic support tiles. Switches toggle their target bridge cells. The bridge state is saved in move history and included in solver states. Teleport switches split the full block into two smaller cubes. The player controls one cube at a time, switches active cube with Space, and merges back into one lying block when the cubes become adjacent.</p>
 </section>
 <section>
 <h2>Editor Implementation</h2>
 <p>The editor uses the same Three.js scene, but it switches the camera to a stable top-down view. It keeps an internal 14 by 10 grid and draws a faint placement grid.</p>
 <p>Mouse placement uses <code>THREE.Raycaster</code>. The mouse position is converted to normalized device coordinates, a ray is cast from the camera, and the ray intersects a horizontal plane. The hit point is rounded to a row and column. That cell is then edited with the active tool.</p>
-<p>The editor enforces one start tile and one goal tile. If a new goal is placed, the old goal is converted back to a normal tile. Custom bridge behavior is intentionally simple: custom switches target all custom bridge cells. This makes the editor usable during a short demo without needing a separate bridge-linking UI.</p>
+<p>The editor enforces one start tile and one goal tile. If a new goal is placed, the old goal becomes a normal tile. Custom bridge behavior is intentionally simple: custom switches target all custom bridge cells. This keeps the editor usable during a short demo without needing a separate bridge-linking UI.</p>
 </section>
 <section>
 <h2>Rendering and Course Concepts</h2>
@@ -302,71 +225,42 @@ rasterization
 fragment shading
 frame buffer</code></pre>
 <p>The level layout starts as data. <code>src/grid.js</code> converts that data into tile meshes. The block and cubes are also meshes. These objects are placed in world space through model transforms.</p>
-<p>The view transform comes from the camera. In gameplay, the camera follows the active block or active split cube from a fixed offset. It lerps toward a target camera position and target look-at point so the framing stays smooth.</p>
-<p>Projection is handled by <code>THREE.PerspectiveCamera</code>. This maps the 3D scene into the 2D browser canvas with perspective depth.</p>
-<p>Rasterization is handled by WebGL through Three.js. Triangles from the block, tiles, bridge meshes, particles, and editor grid become fragments on the canvas.</p>
-<p>Fragment shading is provided through Three.js materials and postprocessing effects. The project does not claim custom GLSL shaders for the block. Three.js and the postprocessing library generate and manage the shader programs used for materials and effects.</p>
-<p>The course ray/path tracing lecture is still relevant conceptually, but the final project uses real-time rasterized rendering. That is the appropriate choice for an interactive puzzle game with constant input, animation, and UI.</p>
+<p>The view transform comes from the camera. In gameplay, the camera follows the active block or active split cube from a fixed offset. It lerps toward a target camera position and target look-at point so the framing stays smooth. Projection is handled by <code>THREE.PerspectiveCamera</code>, which maps the 3D scene into the 2D browser canvas with perspective depth.</p>
+<p>Rasterization is handled by WebGL through Three.js. Triangles from the block, tiles, bridge meshes, particles, and editor grid become fragments on the canvas. Fragment shading is provided through Three.js materials and postprocessing effects. The project does not claim custom GLSL shaders for the block; Three.js and the postprocessing package generate and manage those shader programs.</p>
+<p>The ray/path tracing lecture is still relevant conceptually, but the final game uses real-time rasterized rendering. That is the appropriate choice for an interactive puzzle game with constant input, animation, and UI.</p>
 </section>
 <section>
 <h2>Lighting, Materials, and Visual Feedback</h2>
-<p>The scene uses several light types:</p>
-<ul>
-<li><code>AmbientLight</code> gives a base amount of light so shadowed areas are still readable.</li>
-<li><code>HemisphereLight</code> adds a soft sky/ground color contribution.</li>
-<li><code>DirectionalLight</code> acts like a sun and casts shadows.</li>
-<li>A second directional fill light softens the opposite side.</li>
-</ul>
-<p>The main shadow-casting light follows the active block position. This keeps the shadow camera centered near the board and avoids wasting shadow resolution far away from gameplay.</p>
-<p>Tiles and blocks use <code>MeshPhysicalMaterial</code>. Important material parameters include color, roughness, metalness, clearcoat, emissive color, and environment intensity. Goal tiles use emissive color to stand out. Switches have 3D indicator shapes on top.</p>
-<p>The background sky is procedural. A canvas is drawn with a gradient, clouds, and soft mountain shapes, then used as a <code>CanvasTexture</code>. Themes change sky colors, fog color, tile color, goal color, block color, and sparkle color.</p>
-<p>Postprocessing uses:</p>
-<ul>
-<li>SMAA to reduce jagged edges.</li>
-<li>Bloom to give bright goal and effect areas a soft glow.</li>
-<li>Vignette to slightly darken the edges and keep attention on the board.</li>
-</ul>
-<p>Feedback systems are also implemented:</p>
-<ul>
-<li>Dust particles on landing.</li>
-<li>Shatter particles when a fragile tile breaks.</li>
-<li>Bridge and switch feedback when a switch changes the board.</li>
-<li>Celebration particles on win.</li>
-<li>Small screen shake on heavy events.</li>
-<li>Sparkles around the level using the <code>@pmndrs/vanilla</code> Sparkles helper.</li>
-</ul>
+<p>The scene uses <code>AmbientLight</code> for base visibility, <code>HemisphereLight</code> for soft sky and ground contribution, <code>DirectionalLight</code> as the main sun, and a second directional fill light. The main shadow-casting light follows the active block position, so the shadow camera stays centered near the board.</p>
+<p>Tiles and blocks use <code>MeshPhysicalMaterial</code>. Important parameters include color, roughness, metalness, clearcoat, emissive color, and environment intensity. Goal tiles use emissive color to stand out, and switches have small 3D indicator shapes on top.</p>
+<p>The background sky is procedural. A canvas is drawn with a gradient, clouds, and soft mountain shapes, then used as a <code>CanvasTexture</code>. Themes change sky color, fog color, tile color, goal color, block color, and sparkle color.</p>
+<p>Postprocessing uses SMAA to reduce jagged edges, Bloom to give bright goal and effect areas a soft glow, and Vignette to slightly darken the edges so attention stays near the board. Feedback systems add landing dust, fragile tile shatter, bridge and switch effects, celebration particles, small screen shake, and sparkles around the level.</p>
 </section>
 <section>
 <h2>Audio and Persistence</h2>
 <p>Audio is procedural and does not use external sound files. <code>src/sounds.js</code> creates tones and noise through the browser Web Audio API. Movement uses a short tone and noise burst, falling uses a descending oscillator and noise, and winning uses a small sequence of tones.</p>
-<p>Persistence uses <code>localStorage</code>. The game saves completed levels and best move counts. This is why progress remains after refreshing the page.</p>
-<p>These two browser APIs are used directly. The effects themselves are implemented in the project code.</p>
+<p>Persistence uses <code>localStorage</code>. The game saves completed levels and best move counts, so progress remains after refreshing the page.</p>
 </section>
 <section>
 <h2>BFS Hint Solver</h2>
 <p>The hint solver is one of the most important implementation parts.</p>
 <p>BFS means breadth-first search. It explores a graph one layer at a time. In this project, each graph node is a possible puzzle state, and each edge is one legal move.</p>
-<p>The solver starts from the current block state. It then tries all four movement directions. Every valid result becomes a new state in the queue. Then the solver tries all moves from those states, and so on.</p>
-<p>Because BFS explores by distance from the start, the first time it reaches the goal, the solution is guaranteed to use the smallest possible number of moves. That is why the hint can use the first move of the BFS solution as a shortest-path hint.</p>
+<p>The solver starts from the current block state. It tries all four movement directions. Every valid result becomes a new state in the queue. Then the solver tries all moves from those states, and this continues until the goal is found or no states remain.</p>
+<p>Because BFS explores by distance from the start, the first time it reaches the goal, the solution is guaranteed to use the smallest possible number of moves. The hint system uses the first move of that shortest solution.</p>
 <p>The state key includes:</p>
 <pre><code>x position
 z position
 orientation
 bridge mask</code></pre>
-<p>The bridge mask is important. The same block position can mean different things depending on which bridges are currently visible. For example, standing at the same cell before and after a switch is not always the same puzzle state. A bridge may now exist, or it may have disappeared. The solver stores bridge states as bits so it can compare states quickly.</p>
+<p>The bridge mask is important because the same block position can mean different things depending on which bridges are currently visible. A bridge may now exist, or it may have disappeared. The solver stores bridge states as bits so it can compare states quickly.</p>
 <p>The solver also avoids infinite loops with a <code>visited</code> set. If the same position, orientation, and bridge state has already been explored, it is skipped.</p>
-<p>The in-game hint solver intentionally returns <code>null</code> for teleport levels. Split mode has more state because it has two cubes, one active cube, and merge behavior. Instead of forcing that extra logic into the in-game hint UI, the project handles split-mode verification in <code>scripts/check-levels.js</code>.</p>
+<p>The in-game hint solver intentionally returns <code>null</code> for teleport levels. Split mode has more state because it has two cubes, one active cube, and merge behavior. Instead of forcing that extra logic into the in-game hint UI, split-mode verification is handled in <code>scripts/check-levels.js</code>.</p>
 </section>
 <section>
 <h2>Par Verification</h2>
 <p>Par means the expected best move count for a level. In this project, par is not guessed. It is checked by script.</p>
 <p><code>npm run check:levels</code> loads every official level and solves it. For normal levels, it uses <code>src/solver.js</code>. For the teleport split level, the script includes an expanded BFS that can represent two split cubes, the active cube index, bridge state, and merge back into a full block.</p>
-<p>The script fails if:</p>
-<ul>
-<li>A level has no solution.</li>
-<li>The shortest solution length does not match the level&#x27;s listed par.</li>
-</ul>
-<p>Current verified values:</p>
+<p>The verified shortest paths are:</p>
 <pre><code>1  First Steps       8
 2  Over the Edge     7
 3  Fragile Ground    6
@@ -375,51 +269,29 @@ bridge mask</code></pre>
 6  Split Decision    8
 7  Twin Bridges     13
 8  The Gauntlet     15</code></pre>
-<p>This gives a practical quality check. If a level is edited badly or a movement rule breaks, the script catches it before the demo.</p>
+<p>The script fails if a level has no solution or if the shortest solution length does not match the listed par. This gives a practical quality check before the demo.</p>
 </section>
 <section>
 <h2>Testing and Verification</h2>
-<p>The following checks were run while preparing the final submission:</p>
+<p>The final checks were:</p>
 <pre><code>npm run check:levels
 npm run build
 npm audit
 Playwright browser walkthrough and screenshot capture</code></pre>
-<p>The Playwright walkthrough opened the actual local app, cleared saved progress, captured the home screen, level select, gameplay, hint state, editor, and mobile viewport. The screenshot files used in this report come from that run.</p>
+<p>The Playwright walkthrough opened the actual local app, cleared saved progress, captured the home screen, level select, gameplay, hint state, editor, and mobile viewport. The screenshot files in this report come from that run.</p>
 </section>
 <section>
 <h2>What Was Implemented Directly and What Uses Libraries</h2>
-<p>Directly implemented in this project:</p>
-<ul>
-<li>Level data and custom level format.</li>
-<li>Block movement rules and orientation transitions.</li>
-<li>Occupied-cell validation.</li>
-<li>Fragile tile, soft switch, heavy switch, bridge, teleport split, merge, fall, and win logic.</li>
-<li>Undo and move history.</li>
-<li>BFS hint solver for normal/switch levels.</li>
-<li>Split-mode BFS verification in <code>scripts/check-levels.js</code>.</li>
-<li>Level editor state, custom level generation, and editor UI flow.</li>
-<li>Procedural audio patterns using Web Audio API nodes.</li>
-<li>Procedural sky drawing on a canvas.</li>
-<li>Game UI flow, saved progress format, and responsive layout.</li>
-</ul>
-<p>External libraries and APIs used:</p>
-<ul>
-<li>Three.js: WebGL renderer, scene graph, camera, vectors, quaternions, geometries, materials, lights, shadows, fog, raycaster, texture helpers, and rounded box geometry addon.</li>
-<li>postprocessing: <code>EffectComposer</code>, render/effect passes, SMAA, Bloom, and Vignette.</li>
-<li><code>@pmndrs/vanilla</code>: Sparkles helper for floating sparkle particles.</li>
-<li>Vite: development server and production build tooling.</li>
-<li>Browser Web Audio API: oscillator, gain, buffer, and filter nodes for procedural sound.</li>
-<li>Browser <code>localStorage</code>: saved progress and best move counts.</li>
-</ul>
+<p>The project directly implements the level data format, block movement rules, orientation transitions, occupied-cell validation, fragile tile behavior, switch behavior, bridge toggling, teleport split mode, cube merge, falling, winning, undo, move history, BFS hint solving, split-mode verification, editor state, custom level generation, procedural audio patterns, procedural sky drawing, UI flow, saved progress format, and responsive layout.</p>
+<p>The project uses Three.js for the WebGL renderer, scene graph, camera, vectors, quaternions, geometries, materials, lights, shadows, fog, raycaster, texture helpers, and rounded box geometry addon. It uses the postprocessing package for <code>EffectComposer</code>, render/effect passes, SMAA, Bloom, and Vignette. It uses <code>@pmndrs/vanilla</code> for the Sparkles helper. It uses Vite for development and production build tooling. It uses browser Web Audio API nodes for sound synthesis and browser <code>localStorage</code> for progress persistence.</p>
 <p>No outside Bloxorz source code was copied. The Bloxorz game idea is credited as inspiration, and the implementation here is written around this project&#x27;s own level data, movement code, rendering setup, editor, and solver.</p>
 </section>
 <section>
 <h2>Limitations</h2>
 <p>The in-game hint solver does not currently provide hints for teleport split levels. The split level is still verified by script, but live split-mode hints would need a larger UI because the answer may include switching the active cube.</p>
 <p>The editor intentionally uses a simple bridge model: every custom switch targets every custom bridge. This keeps the editor easy to explain, but a larger editor would need a bridge-linking mode.</p>
-<p>The project uses library-managed shaders through Three.js and postprocessing. Custom GLSL shaders are not part of the current implementation.</p>
-<p>The game uses rasterized WebGL rendering. It does not implement ray tracing/path tracing. That choice keeps the project interactive and stable for the live demo.</p>
-<p>The production build passes, but Vite reports a chunk-size warning because Three.js, postprocessing, and the game code are bundled into one main client chunk. This does not stop the submission build. A future version could code-split the editor or visual effects if download size became a priority.</p>
+<p>The project uses library-managed shaders through Three.js and postprocessing. Custom GLSL shaders are not part of the current implementation. The game uses rasterized WebGL rendering and does not implement ray tracing or path tracing, which keeps the live demo interactive and stable.</p>
+<p>The production build passes, but Vite reports a chunk-size warning because Three.js, postprocessing, and the game code are bundled into one main client chunk. A future version could code-split the editor or visual effects if download size became a priority.</p>
 </section>
 <section>
 <h2>Conclusion</h2>
@@ -429,18 +301,16 @@ Playwright browser walkthrough and screenshot capture</code></pre>
 </section>
 <section>
 <h2>References</h2>
-<ul>
-<li>Course lecture notes in <code>LECTURE_Notes</code>: graphics pipeline, OpenGL overview, transformations, viewing/projection, shading, shadows, and ray/path tracing.</li>
-<li><a href="https://threejs.org/docs/">Three.js documentation</a> for WebGL rendering, scene graph, cameras, lights, materials, vectors, quaternions, raycasting, and geometry helpers.</li>
-<li><a href="https://threejs.org/docs/#api/en/core/Raycaster">Three.js Raycaster documentation</a> for editor mouse-to-grid placement.</li>
-<li><a href="https://threejs.org/docs/#api/en/materials/MeshPhysicalMaterial">Three.js MeshPhysicalMaterial documentation</a> for physically based material parameters.</li>
-<li><a href="https://vite.dev/guide/">Vite guide</a> for the development server and production build tooling.</li>
-<li><a href="https://pmndrs.github.io/postprocessing/public/docs/">pmndrs postprocessing documentation</a> for <code>EffectComposer</code>, SMAA, Bloom, and Vignette effects.</li>
-<li><a href="https://github.com/pmndrs/drei-vanilla">pmndrs/drei-vanilla GitHub repository</a> for the Sparkles helper used for floating sparkle particles.</li>
-<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API">MDN Web Audio API</a> for procedural audio nodes.</li>
-<li><a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage">MDN localStorage documentation</a> for browser-side persistence.</li>
-<li><a href="https://www.coolmathgames.com/0-bloxorz">Coolmath Games Bloxorz page</a> for the original Bloxorz gameplay idea and control objective credited as inspiration.</li>
-</ul>
+<p>Course lecture notes in <code>LECTURE_Notes</code> cover the graphics pipeline, OpenGL overview, transformations, viewing/projection, shading, shadows, and ray/path tracing.</p>
+<p>Three.js documentation was used for WebGL rendering, scene graph, cameras, lights, materials, vectors, quaternions, raycasting, and geometry helpers: <a href="https://threejs.org/docs/">https://threejs.org/docs/</a></p>
+<p>The Three.js Raycaster documentation was used for editor mouse-to-grid placement: <a href="https://threejs.org/docs/#api/en/core/Raycaster">https://threejs.org/docs/#api/en/core/Raycaster</a></p>
+<p>The Three.js MeshPhysicalMaterial documentation was used for physically based material parameters: <a href="https://threejs.org/docs/#api/en/materials/MeshPhysicalMaterial">https://threejs.org/docs/#api/en/materials/MeshPhysicalMaterial</a></p>
+<p>Vite documentation was used for the development server and build tooling: <a href="https://vite.dev/guide/">https://vite.dev/guide/</a></p>
+<p>The pmndrs postprocessing documentation was used for <code>EffectComposer</code>, SMAA, Bloom, and Vignette: <a href="https://pmndrs.github.io/postprocessing/public/docs/">https://pmndrs.github.io/postprocessing/public/docs/</a></p>
+<p>The pmndrs/drei-vanilla repository was used for the Sparkles helper: <a href="https://github.com/pmndrs/drei-vanilla">https://github.com/pmndrs/drei-vanilla</a></p>
+<p>MDN Web Audio API documentation was used for procedural audio nodes: <a href="https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API">https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API</a></p>
+<p>MDN localStorage documentation was used for browser-side persistence: <a href="https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage">https://developer.mozilla.org/en-US/docs/Web/API/Window/localStorage</a></p>
+<p>The Coolmath Games Bloxorz page was used to cite the original Bloxorz gameplay idea as inspiration: <a href="https://www.coolmathgames.com/0-bloxorz">https://www.coolmathgames.com/0-bloxorz</a></p>
 </section>
 </body>
 </html>

@@ -5,19 +5,14 @@
   <title>Bloxorz 3D Presentation</title>
   <style>
     @font-face {
-      font-family: "ArialDeck";
-      src: url("file:///System/Library/Fonts/Supplemental/Arial.ttf") format("truetype");
+      font-family: "CenturyDeck";
+      src: url("file:///Users/alimursaliyev/Library/Fonts/century_normal.ttf") format("truetype");
       font-weight: 400;
     }
     @font-face {
-      font-family: "ArialDeck";
-      src: url("file:///System/Library/Fonts/Supplemental/Arial%20Bold.ttf") format("truetype");
+      font-family: "CenturyDeck";
+      src: url("file:///Users/alimursaliyev/Library/Fonts/century_bold.ttf") format("truetype");
       font-weight: 700;
-    }
-    @font-face {
-      font-family: "ArialMonoDeck";
-      src: url("file:///Users/alimursaliyev/Library/Fonts/arial-monospaced-mt-std.otf") format("opentype");
-      font-weight: 400;
     }
 
     @page {
@@ -34,7 +29,7 @@
       margin: 0;
       background: #000;
       color: #fff;
-      font-family: "ArialDeck", Arial, sans-serif;
+      font-family: "CenturyDeck", Century, serif;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
@@ -50,7 +45,7 @@
       break-after: page;
       position: relative;
       overflow: hidden;
-      padding: 0.72in 0.86in;
+      padding: 0.7in 0.86in;
       background: #000;
       counter-increment: slide;
     }
@@ -64,79 +59,47 @@
       content: counter(slide);
       position: absolute;
       right: 0.72in;
-      bottom: 0.48in;
+      bottom: 0.46in;
       color: #fff;
-      font: 10pt "ArialMonoDeck", Arial, monospace;
+      font-size: 11pt;
     }
 
     h1,
     h2,
-    p,
-    pre {
+    p {
       margin: 0;
       color: #fff;
       letter-spacing: 0;
     }
 
     h1 {
-      font-size: 66pt;
-      line-height: 0.92;
+      font-size: 64pt;
+      line-height: 0.94;
       font-weight: 700;
-      max-width: 7in;
+      max-width: 8.8in;
     }
 
     h2 {
-      font-size: 44pt;
-      line-height: 1;
+      font-size: 42pt;
+      line-height: 1.03;
       font-weight: 700;
-      max-width: 9in;
+      max-width: 9.8in;
     }
 
     p {
       font-size: 25pt;
-      line-height: 1.25;
-      max-width: 10.2in;
-    }
-
-    pre {
-      font: 22pt/1.35 "ArialMonoDeck", Arial, monospace;
-      white-space: pre-wrap;
-      max-width: 10.7in;
-    }
-
-    .small {
-      font-size: 18pt;
-      line-height: 1.34;
-    }
-
-    .mono {
-      font-family: "ArialMonoDeck", Arial, monospace;
+      line-height: 1.32;
+      max-width: 10.8in;
     }
 
     .label {
-      font: 15pt "ArialMonoDeck", Arial, monospace;
-      margin-bottom: 0.28in;
+      font-size: 16pt;
       text-transform: uppercase;
+      margin-bottom: 0.27in;
     }
 
     .space {
-      height: 0.48in;
-    }
-
-    .space-small {
-      height: 0.24in;
-    }
-
-    .two {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 0.7in;
-      align-items: start;
-    }
-
-    .tight pre {
-      font-size: 19pt;
-      line-height: 1.3;
+      height: 0.42in;
     }
 
     .title {
@@ -148,9 +111,25 @@
     }
 
     .title p {
-      margin-top: 0.45in;
-      font-size: 24pt;
-      max-width: 7.6in;
+      margin-top: 0.38in;
+      font-size: 27pt;
+    }
+
+    .small p {
+      font-size: 23pt;
+      line-height: 1.34;
+    }
+
+    .compact p {
+      font-size: 21.5pt;
+      line-height: 1.34;
+    }
+
+    .two {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.66in;
+      align-items: start;
     }
   </style>
 </head>
@@ -159,162 +138,94 @@
     <div class="title">
       <p class="label">Computer Graphics Project</p>
       <h1>Bloxorz 3D</h1>
-      <p>Three.js / WebGL puzzle game</p>
+      <p>Three.js and WebGL puzzle game</p>
     </div>
   </section>
 
   <section class="slide">
-    <p class="label">Scope</p>
-    <h2>What we built</h2>
+    <p class="label">Project overview</p>
+    <h2>Playable puzzle, complete flow</h2>
     <div class="space"></div>
-    <pre>8 verified levels
-rolling cuboid
-fragile tiles
-heavy and soft switches
-bridges
-teleport split mode
-level editor
-saved progress
-hint solver</pre>
+    <p>The project contains eight verified levels, a rolling cuboid, fragile tiles, switches, bridges, teleport split mode, saved progress, a custom editor, and a hint system based on shortest-path search.</p>
   </section>
 
   <section class="slide">
-    <p class="label">Game state</p>
-    <h2>Discrete first</h2>
+    <p class="label">Core model</p>
+    <h2>The puzzle state is discrete</h2>
     <div class="space"></div>
-    <pre>state = x, z, orientation
-
-orientation =
-  standing
-  lying_x
-  lying_z
-
-occupied cells decide:
-  legal move
-  fall
-  switch
-  goal</pre>
+    <p>The state is x, z, and orientation. Standing occupies one tile, lying_x occupies two tiles on the x axis, and lying_z occupies two tiles on the z axis. Those occupied cells decide legal moves, falling, switches, bridges, and winning.</p>
   </section>
 
   <section class="slide">
-    <p class="label">Movement</p>
-    <h2>Animation follows the rule</h2>
+    <p class="label">Movement and transforms</p>
+    <h2>Smooth motion follows exact rules</h2>
     <div class="space"></div>
-    <pre>input changes grid state
-
-mesh position is interpolated
-mesh rotation uses quaternion motion
-
-after each move:
-  snap back to exact grid coordinate</pre>
+    <p>Each input changes an exact grid state first. The mesh then interpolates its position, rotates with quaternion motion, and snaps back to the target coordinate so the animation stays smooth without damaging the puzzle logic.</p>
   </section>
 
-  <section class="slide">
+  <section class="slide small">
     <p class="label">Level mechanics</p>
     <h2>Rules on the board</h2>
     <div class="space"></div>
-    <pre>normal tile      supports the block
-fragile tile     breaks under standing block
-heavy switch     standing block only
-soft switch      any occupied cell
-bridge           toggled tile
-teleport         split into two cubes
-goal             standing block only</pre>
+    <p>Normal tiles support the block. Fragile tiles break under a standing block. Soft switches react to any occupied cell, while heavy switches require the full upright block. Bridges change the level graph, teleport splits the block into two cubes, and the goal accepts only a standing full block.</p>
   </section>
 
   <section class="slide">
     <p class="label">Graphics pipeline</p>
-    <h2>Course connection</h2>
+    <h2>Course concepts in the scene</h2>
     <div class="space"></div>
-    <pre>geometry
-model transform
-view transform
-projection
-rasterization
-fragment shading
-frame buffer</pre>
+    <p>The implementation moves from geometry to model transforms, then to the camera view transform, perspective projection, rasterization, fragment shading, and finally the browser canvas frame buffer.</p>
   </section>
 
-  <section class="slide">
+  <section class="slide small">
     <p class="label">Rendering</p>
-    <h2>Scene setup</h2>
+    <h2>Scene and visual feedback</h2>
     <div class="space"></div>
-    <pre>PerspectiveCamera
-MeshPhysicalMaterial
-DirectionalLight
-AmbientLight
-shadows
-fog
-SMAA
-bloom
-vignette
-canvas sky texture
-raycast editor</pre>
+    <p>The scene uses PerspectiveCamera, MeshPhysicalMaterial, directional and ambient lighting, shadows, fog, SMAA, bloom, vignette, procedural sky, particles, procedural audio, and raycasting for editor tile placement.</p>
   </section>
 
   <section class="slide">
     <p class="label">Interaction</p>
-    <h2>Player input</h2>
+    <h2>One game state, multiple controls</h2>
     <div class="space"></div>
-    <pre>keyboard controls
-touch controls
-third-person camera
-move counter
-par display
-hints
-localStorage progress</pre>
+    <p>Keyboard controls, touch controls, the third-person camera, the HUD, hints, and localStorage progress all read from the same game state. This keeps desktop, mobile, and saved progress consistent.</p>
   </section>
 
-  <section class="slide tight">
+  <section class="slide small">
     <p class="label">Solver</p>
     <h2>BFS over puzzle states</h2>
     <div class="space"></div>
-    <div class="two">
-      <pre>state key:
-x, z
-orientation
-bridge mask
-split status</pre>
-      <pre>verified par:
-1  First Steps      8
-2  Over the Edge    7
-3  Fragile Ground   6
-4  Open Sesame      6
-5  Heavy Duty      12
-6  Split Decision   8
-7  Twin Bridges    13
-8  The Gauntlet    15</pre>
-    </div>
+    <p>Breadth-first search explores moves level by level, so the first solution found is shortest. The state key includes position, orientation, bridge state, and split-block state for verification.</p>
   </section>
 
-  <section class="slide tight">
-    <p class="label">Code map</p>
-    <h2>Files to explain</h2>
+  <section class="slide compact">
+    <p class="label">Verified levels</p>
+    <h2>Par values checked by script</h2>
     <div class="space"></div>
-    <pre>src/main.js        game flow
-src/grid.js        board, tiles, bridges
-src/controls.js    movement and validation
-src/levels.js      levels, pars, themes
-src/solver.js      hint search
-src/editor.js      custom levels
-src/scene.js       renderer, sky, fog
-src/camera.js      third-person camera
-src/lighting.js    lights and shadows
-src/particles.js   visual feedback
-scripts/check-levels.js   level verification</pre>
+    <p>First Steps is 8, Over the Edge is 7, Fragile Ground is 6, Open Sesame is 6, Heavy Duty is 12, Split Decision is 8, Twin Bridges is 13, and The Gauntlet is 15.</p>
+    <div class="space"></div>
+    <p>The command npm run check:levels verifies that every official level solves with its listed par value.</p>
+  </section>
+
+  <section class="slide compact">
+    <p class="label">Code structure</p>
+    <h2>Main files</h2>
+    <div class="space"></div>
+    <p>main.js controls flow, grid.js builds the board, controls.js handles movement, levels.js stores level data, solver.js performs BFS, editor.js creates custom levels, and scene/camera/lighting files define the visual world.</p>
   </section>
 
   <section class="slide">
-    <p class="label">Demo order</p>
-    <h2>Five minutes</h2>
+    <p class="label">Live demo</p>
+    <h2>Five-minute flow</h2>
     <div class="space"></div>
-    <pre>1. level select and saved progress
-2. Level 1 movement and goal
-3. fragile tile
-4. switch and bridge
-5. teleport split and merge
-6. hint
-7. editor if time remains</pre>
+    <p>The demo starts with level selection, then shows Level 1 movement, a fragile tile, a switch and bridge, teleport split and merge, one BFS hint, and the editor if time remains.</p>
+  </section>
+
+  <section class="slide">
+    <p class="label">Summary</p>
+    <h2>What the project demonstrates</h2>
+    <div class="space"></div>
+    <p>The project demonstrates real-time 3D rendering, model-view-projection concepts, lighting and shading, event-driven interaction, camera control, state-space search, persistence, and a complete playable workflow.</p>
   </section>
 </body>
 </html>
