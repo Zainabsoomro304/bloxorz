@@ -403,10 +403,6 @@ export function createGrid(scene, levelData, animate = true, themeColors = null)
 
     let highlightedTileEntries = [];
 
-    function highlightTile(row, col) {
-        highlightTiles([{ row, col }]);
-    }
-
     function highlightTiles(cells) {
         clearHighlight();
         highlightedTileEntries = [];
@@ -438,6 +434,6 @@ export function createGrid(scene, levelData, animate = true, themeColors = null)
         gridGroup, levelLayout, tiles, goalTile, bridgeStates,
         getTileType, removeTile, addBridgeTile, removeBridgeTile,
         toggleBridges, getSwitchData, restoreLayout, updateTime,
-        fallAway, startRow, startCol, highlightTile, highlightTiles, clearHighlight,
+        fallAway, startRow, startCol, highlightTiles, clearHighlight,
     };
 }

@@ -32,7 +32,8 @@ def find_chrome():
 
 def inline(text):
     escaped = html.escape(text)
-    return re.sub(r"`([^`]+)`", r"<code>\1</code>", escaped)
+    escaped = re.sub(r"`([^`]+)`", r"<code>\1</code>", escaped)
+    return re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', escaped)
 
 
 def markdown_to_html(src):
@@ -77,6 +78,19 @@ def markdown_to_html(src):
         if not raw.strip():
             flush_para()
             close_list()
+            continue
+
+        image = re.match(r"^!\[([^\]]*)\]\(([^)]+)\)$", raw)
+        if image:
+            flush_para()
+            close_list()
+            alt = html.escape(image.group(1).strip())
+            src = html.escape(image.group(2).strip(), quote=True)
+            out.append("<figure>")
+            out.append(f"<img src=\"{src}\" alt=\"{alt}\">")
+            if alt:
+                out.append(f"<figcaption>{alt}</figcaption>")
+            out.append("</figure>")
             continue
 
         if raw.startswith("# "):
@@ -220,6 +234,27 @@ def build_html():
     code {{
       font-family: "ArialMonoReport", Arial, monospace;
       font-size: 0.92em;
+    }}
+    a {{
+      color: #111111;
+      text-decoration-thickness: 0.08em;
+      text-underline-offset: 0.16em;
+    }}
+    figure {{
+      margin: 4mm 0 7mm;
+      break-inside: avoid;
+    }}
+    img {{
+      display: block;
+      width: 100%;
+      max-height: 112mm;
+      object-fit: contain;
+      border: 1px solid #dddddd;
+    }}
+    figcaption {{
+      font-size: 9.2pt;
+      margin-top: 1.6mm;
+      color: #444444;
     }}
     pre {{
       font-family: "ArialMonoReport", Arial, monospace;

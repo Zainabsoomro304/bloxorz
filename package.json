@@ -15,7 +15,6 @@
   "dependencies": {
     "@pmndrs/vanilla": "^1.25.0",
     "postprocessing": "^6.39.1",
-    "three": "^0.184.0",
-    "three-gpu-pathtracer": "^0.0.24"
+    "three": "^0.184.0"
   }
 }

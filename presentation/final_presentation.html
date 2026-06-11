@@ -238,7 +238,7 @@ DirectionalLight, AmbientLight, shadows, fog
 SMAA, bloom, and vignette postprocessing
 dust, shatter, sparkles, and win particles
 procedural audio for movement and switches
-guarded path tracing integration with fallback</pre>
+raycasting for editor tile placement</pre>
   </section>
 
   <section class="slide">
@@ -302,7 +302,9 @@ src/controls.js      movement, validation, split cubes
 src/levels.js        level data, pars, themes
 src/solver.js        BFS hint search
 src/editor.js        custom level creation
-src/scene.js         renderer, camera, lights, postprocessing
+src/scene.js         renderer, sky, fog, environment
+src/camera.js        third-person camera
+src/lighting.js      lights and shadows
 src/particles.js     dust, shatter, sparkles, win feedback
 scripts/check-levels.js   automated level verification</pre>
   </section>

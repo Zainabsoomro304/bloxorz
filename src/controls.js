@@ -4,7 +4,7 @@ import { getOrientationQuaternion, getBlockYForOrientation } from './block.js';
 
 // Manages input, block movement, switch/bridge logic, split mode, and undo.
 
-export function setupControls(game, callbacks, cameraApi) {
+export function setupControls(game, callbacks) {
     function processMove(dx, dz) {
         if (game.isWon) return;
         if (dx === 0 && dz === 0) return;

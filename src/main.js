@@ -16,9 +16,6 @@ import * as THREE from 'three';
 // drei-vanilla Sparkles helper
 import { Sparkles } from '@pmndrs/vanilla/core/Sparkles.js';
 
-// Path tracing
-import { WebGLPathTracer } from 'three-gpu-pathtracer';
-
 // Post-processing (pmndrs/postprocessing — better than Three.js built-in)
 import {
     EffectComposer,
@@ -124,48 +121,6 @@ const vignette = new VignetteEffect({
 
 const effectPass = new EffectPass(camera, smaa, bloom, vignette);
 composer.addPass(effectPass);
-
-// ── Path Tracing (hybrid: rasterized during play, path-traced when idle) ──
-
-const pathTracer = new WebGLPathTracer(renderer);
-pathTracer.bounces = 4;
-pathTracer.renderScale = 1;
-pathTracer.rasterizeScene = true;
-pathTracer.fadeDuration = 600;
-pathTracer.minSamples = 3;
-pathTracer.renderDelay = 200;
-pathTracer.filterGlossyFactor = 0.5;
-pathTracer.tiles.set(2, 2);
-
-// Use EffectComposer (bloom + vignette + SMAA) for the rasterized fallback
-pathTracer.rasterizeSceneCallback = () => {
-    composer.render();
-};
-
-pathTracer.pausePathTracing = true;
-
-let ptNeedsUpdate = true;
-let pathTracingEnabled = true;
-
-function rebuildPathTracerScene() {
-    camera.updateMatrixWorld();
-
-    // three-gpu-pathtracer expects an equirect/cube environment texture. The
-    // raster renderer uses a PMREM render-target texture, so hide it only while
-    // the path tracer builds its acceleration structures.
-    const rasterEnvironment = scene.environment;
-    scene.environment = null;
-
-    try {
-        pathTracer.setScene(scene, camera);
-    } catch (error) {
-        console.warn('Path tracing disabled; falling back to raster renderer.', error);
-        pathTracingEnabled = false;
-    } finally {
-        scene.environment = rasterEnvironment;
-        ptNeedsUpdate = false;
-    }
-}
 
 window.addEventListener('resize', () => {
     composer.setSize(window.innerWidth, window.innerHeight);
@@ -330,7 +285,6 @@ function showHomeScreen(fromGame = false) {
             if (t >= 1) {
                 applyTheme(0);
                 enterHomeState();
-                ptNeedsUpdate = true;
             } else {
                 requestAnimationFrame(step);
             }
@@ -470,7 +424,6 @@ function startLevel(index) {
             gameUiEl.style.display = '';
             menuState = 'game';
             sounds.levelStart();
-            ptNeedsUpdate = true;
         } else {
             requestAnimationFrame(step);
         }
@@ -506,8 +459,6 @@ function resetLevel() {
     statusOverlay.classList.remove('visible');
     splitHintEl.style.display = 'none';
 
-    // Rebuild path tracing BVH for new level
-    ptNeedsUpdate = true;
 }
 
 function cleanupSplit() {
@@ -643,7 +594,6 @@ function performLevelTransition() {
 
             impactSquash(block);
             sounds.levelStart();
-            ptNeedsUpdate = true;
         } else {
             requestAnimationFrame(fall);
         }
@@ -876,7 +826,6 @@ function enterEditor() {
     statusOverlay.classList.remove('visible');
     editorUiEl?.classList.add('visible');
     editor.enter();
-    ptNeedsUpdate = true;
 }
 
 function exitEditor() {
@@ -885,7 +834,6 @@ function exitEditor() {
     ensureMenuScene();
     applyTheme(0);
     enterHomeState();
-    ptNeedsUpdate = true;
 }
 
 function playCustomLevel() {
@@ -917,7 +865,6 @@ function playCustomLevel() {
     gameUiEl.style.display = '';
     if (editBtnEl) editBtnEl.style.display = '';
     menuState = 'game';
-    ptNeedsUpdate = true;
 }
 
 function backToEditor() {
@@ -932,7 +879,6 @@ function backToEditor() {
     statusOverlay.classList.remove('visible');
     editorUiEl?.classList.add('visible');
     editor.enter(true); // re-enter with preserved state
-    ptNeedsUpdate = true;
 }
 
 editorBtnEl?.addEventListener('click', () => enterEditor());
@@ -998,7 +944,7 @@ setupControls(game, {
     onFragileBreak,
     onWinEffect,
     onHint,
-}, cameraApi);
+});
 
 // ── Start ───────────────────────────────────────────────────────────────────
 
@@ -1083,19 +1029,6 @@ function animate() {
         camera.position.y += off.y;
         camera.position.z += off.z;
     }
-
-    // ── Path tracing management ──
-    if (!pathTracingEnabled) {
-        composer.render();
-        return;
-    }
-
-    const isAnimating = game.isTransitioning
-        || game.blockApi?.state.isAnimating
-        || game.blockApi?.state.isFalling
-        || (game.isSplit && game.cubes?.some(c => c._isAnimating))
-        || shake.isShaking
-        || particles.isActive;
 
     composer.render();
 }

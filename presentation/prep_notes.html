@@ -225,7 +225,7 @@ Use this slide to show direct lecture connection.</pre>
 - Fog adds depth.
 - SMAA reduces jagged edges.
 - Bloom/vignette are postprocessing effects.
-- GPU path tracing is optional and has fallback behavior.
+- The editor uses raycasting to convert mouse position into grid cells.
 
 Important:
 Do not claim custom block shaders. Three.js materials use WebGL shader programs internally.</pre>
@@ -283,7 +283,9 @@ npm run check:levels</pre>
 - levels.js: level data, themes, pars.
 - solver.js: BFS hint search.
 - editor.js: custom level editing and saving.
-- scene.js: renderer, camera, lights, postprocessing.
+- scene.js: WebGL renderer, procedural sky, fog, environment map.
+- camera.js: third-person follow camera.
+- lighting.js: ambient, hemisphere, directional lights, shadows.
 - particles.js: dust, shatter, sparkles, win feedback.
 - scripts/check-levels.js: automated solvability check.
 

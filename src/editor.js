@@ -87,8 +87,6 @@ export function createEditor(scene, camera, renderer) {
     const bridgePositions = new Set(); // "row,col" keys for bridge tiles
     const ghostTiles = [];   // array of ghost plane meshes
     let editorGroup = null;
-    let preserveState = false; // true when re-entering from gameplay
-
     // Saved camera state
     let savedCamPos = null;
     let savedCamQuat = null;

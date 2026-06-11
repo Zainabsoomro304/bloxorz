@@ -40,7 +40,7 @@ npm audit
 - Level editor with normal, fragile, goal, start, soft switch, heavy switch, bridge, and eraser tools.
 - Third-person camera and touch swipe controls.
 - Procedural sound effects, dust/shatter/celebration particles, screen shake, animated menus, and per-level themes.
-- PBR-style materials, directional/hemisphere/ambient lighting, shadows, fog, bloom, vignette, SMAA, and optional idle path tracing with raster fallback.
+- PBR-style materials, directional/hemisphere/ambient lighting, shadows, fog, bloom, vignette, and SMAA postprocessing.
 
 ## Code Map
 
