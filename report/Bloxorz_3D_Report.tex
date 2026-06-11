@@ -63,6 +63,13 @@
 }
 
 \newcommand{\code}[1]{\texttt{#1}}
+\newcommand{\snapshot}[2]{%
+  \begin{minipage}[t]{0.48\linewidth}
+    \centering
+    \includegraphics[width=\linewidth,height=43mm,keepaspectratio]{#1}
+    \captionof{figure}{#2}
+  \end{minipage}
+}
 
 \begin{document}
 
@@ -114,41 +121,26 @@ A verification script that checks the listed par values for all eight official l
 
 \section{Implementation Snapshots}
 
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=\linewidth]{01-home.png}
-  \caption{Home screen with the 3D menu preview.}
-\end{figure}
+These snapshots are grouped together so the reader can see the main visual states before reading the implementation details.
 
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=\linewidth]{02-level-select.png}
-  \caption{Level selection screen with progress-aware level buttons.}
-\end{figure}
+\begin{center}
+\snapshot{01-home.png}{Home screen with the 3D menu preview.}
+\hfill
+\snapshot{02-level-select.png}{Level selection screen with progress-aware level buttons.}
 
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=\linewidth]{03-gameplay.png}
-  \caption{Gameplay view with the block, board, HUD, and goal tile.}
-\end{figure}
+\vspace{4mm}
 
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=\linewidth]{04-hint.png}
-  \caption{Hint view after pressing H. The solver highlights the next occupied cells.}
-\end{figure}
+\snapshot{03-gameplay.png}{Gameplay view with the block, board, HUD, and goal tile.}
+\hfill
+\snapshot{04-hint.png}{Hint view after pressing H. The solver highlights the next occupied cells.}
 
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=\linewidth]{05-editor.png}
-  \caption{Editor view with the tool strip and raycast placement grid.}
-\end{figure}
+\vspace{4mm}
 
-\begin{figure}[h]
-  \centering
-  \includegraphics[width=0.55\linewidth]{06-mobile.png}
-  \caption{Mobile viewport test with the same gameplay scene and responsive HUD.}
-\end{figure}
+\snapshot{05-editor.png}{Editor view with the tool strip and raycast placement grid.}
+\hfill
+\snapshot{06-mobile.png}{Mobile viewport test with the same gameplay scene and responsive HUD.}
+\end{center}
+\clearpage
 
 \section{Project Structure}
 

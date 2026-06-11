@@ -36,6 +36,11 @@ def inline(text):
     return re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r'<a href="\2">\1</a>', escaped)
 
 
+def slugify(text):
+    slug = re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+    return slug or "section"
+
+
 def markdown_to_html(src):
     lines = src.splitlines()
     out = []
@@ -108,9 +113,10 @@ def markdown_to_html(src):
             close_list()
             if section_open:
                 out.append("</section>")
-            out.append("<section>")
+            title = raw[3:].strip()
+            out.append(f"<section class='section-{slugify(title)}'>")
             section_open = True
-            out.append("<h2>" + inline(raw[3:].strip()) + "</h2>")
+            out.append("<h2>" + inline(title) + "</h2>")
             continue
 
         if raw.startswith("### "):
@@ -169,7 +175,7 @@ def build_html():
     }}
     @page {{
       size: A4;
-      margin: 18mm 18mm 20mm;
+      margin: 15mm 17mm 18mm;
     }}
     * {{
       box-sizing: border-box;
@@ -179,33 +185,33 @@ def build_html():
       background: #ffffff;
       color: #111111;
       font-family: "CenturyReport", Century, serif;
-      font-size: 11pt;
-      line-height: 1.42;
+      font-size: 10.8pt;
+      line-height: 1.38;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }}
     section {{
       break-inside: auto;
-      margin-bottom: 14mm;
+      margin-bottom: 7mm;
     }}
     .cover {{
-      min-height: 115mm;
+      min-height: 39mm;
       display: flex;
       flex-direction: column;
       justify-content: center;
       border-bottom: 1px solid #111;
-      margin-bottom: 12mm;
+      margin-bottom: 6mm;
     }}
     h1 {{
-      font-size: 32pt;
+      font-size: 31pt;
       line-height: 1.02;
-      margin: 0 0 7mm;
+      margin: 0 0 5mm;
       letter-spacing: 0;
     }}
     h2 {{
-      font-size: 17pt;
+      font-size: 16pt;
       line-height: 1.15;
-      margin: 0 0 4mm;
+      margin: 0 0 3mm;
       letter-spacing: 0;
       break-after: avoid;
     }}
@@ -215,8 +221,10 @@ def build_html():
       break-after: avoid;
     }}
     p {{
-      margin: 0 0 3.2mm;
-      max-width: 164mm;
+      margin: 0 0 2.6mm;
+      max-width: 160mm;
+      orphans: 3;
+      widows: 3;
     }}
     ul {{
       margin: 0 0 3.6mm 5mm;
@@ -227,8 +235,8 @@ def build_html():
       padding-left: 1mm;
     }}
     code {{
-      font-family: "CenturyReport", Century, serif;
-      font-size: 0.92em;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.9em;
     }}
     a {{
       color: #111111;
@@ -236,13 +244,13 @@ def build_html():
       text-underline-offset: 0.16em;
     }}
     figure {{
-      margin: 4mm 0 7mm;
+      margin: 3mm 0 5mm;
       break-inside: avoid;
     }}
     img {{
       display: block;
       width: 100%;
-      max-height: 112mm;
+      max-height: 88mm;
       object-fit: contain;
       border: 1px solid #dddddd;
     }}
@@ -252,7 +260,7 @@ def build_html():
       color: #444444;
     }}
     pre {{
-      font-family: "CenturyReport", Century, serif;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 9.2pt;
       line-height: 1.35;
       background: #f5f5f5;
@@ -264,6 +272,37 @@ def build_html():
     }}
     pre code {{
       font-size: inherit;
+    }}
+    .section-implementation-snapshots {{
+      break-inside: avoid;
+      break-after: page;
+    }}
+    .section-implementation-snapshots figure {{
+      display: inline-block;
+      width: calc(50% - 2.5mm);
+      margin: 1.5mm 4mm 4mm 0;
+      vertical-align: top;
+    }}
+    .section-implementation-snapshots figure:nth-of-type(2n) {{
+      margin-right: 0;
+    }}
+    .section-implementation-snapshots img {{
+      height: 45mm;
+      max-height: 45mm;
+      object-fit: contain;
+      background: #ffffff;
+    }}
+    .section-implementation-snapshots figcaption {{
+      min-height: 9mm;
+      line-height: 1.25;
+    }}
+    .section-bfs-hint-solver,
+    .section-references,
+    .section-what-was-implemented-directly-and-what-uses-libraries {{
+      break-inside: auto;
+    }}
+    .section-puzzle-state {{
+      break-inside: avoid;
     }}
   </style>
 </head>

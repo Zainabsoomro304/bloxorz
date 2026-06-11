@@ -28,6 +28,8 @@ The visual side uses WebGL through Three.js. The scene uses physical materials, 
 
 ## Implementation Snapshots
 
+These snapshots are grouped together so the reader can see the main visual states before reading the implementation details.
+
 ![Home screen with the 3D menu preview.](assets/01-home.png)
 
 ![Level selection screen with progress-aware level buttons.](assets/02-level-select.png)
